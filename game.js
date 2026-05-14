@@ -268,6 +268,11 @@ var keys = {};
 window.addEventListener('keydown', function(e) { keys[e.code] = true; e.preventDefault(); });
 window.addEventListener('keyup',   function(e) { keys[e.code] = false; });
 
+function petMaxHp(pt) {
+  if (pt.cost > 0) return Math.max(50, Math.round(40 + pt.cost * 0.30));
+  return Math.max(60, Math.round(60 + (pt.atk || 0) * 1.5 + (pt.heal || 0) * 1.5));
+}
+
 function Game() {
   this.lv = 0; this.gems = 0; this.score = 0;
   this.pets = []; this.ptim = {}; this.patk = {};
@@ -297,20 +302,22 @@ Game.prototype.build = function() {
   this.chest = null;
   if (!this.alreadyOwned) {
     var cpos = this.rf();
-    this.chest = {x: cpos.x, y: cpos.y, open: false};
+    this.chest = {x: cpos.x, y: cpos.y, open: false, hp: 200, mhp: 200};
     var pool = this.ld.pool, md = pool[pool.length - 1];
     var hpSc = 1 + this.lv * 0.12, atkSc = 1 + this.lv * 0.10, spdSc = 1 + this.lv * 0.014;
     this.mons.push({
       t:'Guardian', hp:Math.round(md.hp*hpSc*3), mhp:Math.round(md.hp*hpSc*3),
       atk:Math.round(md.atk*atkSc*1.8), spd:Math.round(md.spd*spdSc),
       gem:Math.round(md.gem*3), e:md.e,
-      x:cpos.x, y:cpos.y, at:0, mt:0, dx:0, dy:0, dead:false, isGuardian:true
+      x:cpos.x, y:cpos.y, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isGuardian:true
     });
   }
 
   var n = Date.now();
   for (var i = 0; i < this.pets.length; i++) {
     var pt = this.pets[i];
+    if (pt.dead) { pt.dead = false; pt.hp = pt.mhp || petMaxHp(pt); }
+    if (!pt.mhp) { pt.mhp = petMaxHp(pt); pt.hp = pt.mhp; }
     if (!this.patk[pt.uid]) this.patk[pt.uid] = n;
     if (pt.hi > 0 && !this.ptim[pt.uid]) this.ptim[pt.uid] = n;
     var ang = (i / Math.max(1, this.pets.length)) * Math.PI * 2;
@@ -320,6 +327,8 @@ Game.prototype.build = function() {
   }
   for (var ti = 0; ti < this.towers.length; ti++) {
     var tw = this.towers[ti], tpos = this.rf();
+    if (tw.dead) { tw.dead = false; tw.hp = tw.mhp || petMaxHp(tw); }
+    if (!tw.mhp) { tw.mhp = petMaxHp(tw); tw.hp = tw.mhp; }
     tw.x = tpos.x; tw.y = tpos.y;
     if (!this.towerAtk[tw.uid]) this.towerAtk[tw.uid] = n;
   }
@@ -363,7 +372,7 @@ Game.prototype.spawnMons = function() {
       spd: Math.round(md.spd * spdSc),
       gem: md.gem, e: md.e,
       x: pos.x, y: pos.y,
-      at: 0, mt: 0, dx: 0, dy: 0, dead: false
+      at: 0, pat: 0, mt: 0, dx: 0, dy: 0, dead: false
     });
   }
   return arr;
@@ -392,6 +401,7 @@ Game.prototype.updatePets = function(dt, now) {
   var alive = this.mons.filter(function(m) { return !m.dead; });
 
   this.pets.forEach(function(pt) {
+    if (pt.dead) return;
     if (pt.x === undefined) {
       var a0 = Math.random()*Math.PI*2;
       pt.x = p.x + Math.cos(a0)*50; pt.y = p.y + Math.sin(a0)*40;
@@ -432,26 +442,47 @@ Game.prototype.updatePets = function(dt, now) {
       }
     }
 
-    // Attacker: walk to nearest monster
-    if (!moved && pt.atk > 0 && !pt.healMode && alive.length) {
-      var near = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
-      var dn = Math.hypot(near.x-pt.x, near.y-pt.y);
-      if (dn > 32) { self.mv(pt, (near.x-pt.x)/dn, (near.y-pt.y)/dn, APPROACH, dt); }
-      moved = true;
+    // Attacker: walk to nearest monster, or chest if it's closer
+    if (!moved && pt.atk > 0 && !pt.healMode) {
+      var chstW = (self.chest && !self.chest.open) ? self.chest : null;
+      var chstWD = chstW ? Math.hypot(chstW.x-pt.x, chstW.y-pt.y) : Infinity;
+      if (alive.length) {
+        var near = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
+        var dn = Math.hypot(near.x-pt.x, near.y-pt.y);
+        var wx = (chstW && chstWD < dn) ? chstW.x : near.x;
+        var wy = (chstW && chstWD < dn) ? chstW.y : near.y;
+        var wd = (chstW && chstWD < dn) ? chstWD : dn;
+        if (wd > 32) self.mv(pt, (wx-pt.x)/wd, (wy-pt.y)/wd, APPROACH, dt);
+        moved = true;
+      } else if (chstW) {
+        if (chstWD > 32) self.mv(pt, (chstW.x-pt.x)/chstWD, (chstW.y-pt.y)/chstWD, APPROACH, dt);
+        moved = true;
+      }
     }
 
     // Attack trigger (from pet's own position)
-    if (pt.atk > 0 && pt.ar > 0 && alive.length) {
-      if (!self.patk[uid]) self.patk[uid] = now;
-      if (now - self.patk[uid] >= pt.ar) {
-        self.patk[uid] = now;
-        var tg = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
-        if (Math.hypot(tg.x-pt.x, tg.y-pt.y) < 260) {
-          tg.hp -= pt.atk;
+    if (pt.atk > 0 && pt.ar > 0) {
+      var chstA = (self.chest && !self.chest.open) ? self.chest : null;
+      var chstAD = chstA ? Math.hypot(chstA.x-pt.x, chstA.y-pt.y) : Infinity;
+      if (alive.length || (chstA && chstAD < 260)) {
+        if (!self.patk[uid]) self.patk[uid] = now;
+        if (now - self.patk[uid] >= pt.ar) {
+          self.patk[uid] = now;
           var fc = pt.id==='dragon'?'#ff7700':pt.id==='god'?'#ffff00':pt.id==='cerberus'?'#ff4400':'#70b0ff';
-          self.fx.push({x1:pt.x, y1:pt.y, x2:tg.x, y2:tg.y, l:200, c:fc});
-          self.fl(tg.x, tg.y, '-'+pt.atk, '#ffd700');
-          if (tg.hp <= 0) self.kill(tg);
+          if (alive.length) {
+            var tg = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
+            var tgD = Math.hypot(tg.x-pt.x, tg.y-pt.y);
+            if (chstA && chstAD < tgD && chstAD < 260) {
+              self.fx.push({x1:pt.x, y1:pt.y, x2:chstA.x, y2:chstA.y, l:200, c:'#ff8800'});
+              self.dmgChest(pt.atk);
+            } else if (tgD < 260) {
+              tg.hp -= pt.atk; self.fx.push({x1:pt.x, y1:pt.y, x2:tg.x, y2:tg.y, l:200, c:fc});
+              self.fl(tg.x, tg.y, '-'+pt.atk, '#ffd700'); if (tg.hp <= 0) self.kill(tg);
+            }
+          } else if (chstA && chstAD < 260) {
+            self.fx.push({x1:pt.x, y1:pt.y, x2:chstA.x, y2:chstA.y, l:200, c:'#ff8800'});
+            self.dmgChest(pt.atk);
+          }
         }
       }
     }
@@ -474,8 +505,11 @@ Game.prototype.updatePets = function(dt, now) {
 Game.prototype.updateTowers = function(dt, now) {
   var self = this;
   var alive = this.mons.filter(function(m) { return !m.dead; });
+  var chst = (this.chest && !this.chest.open) ? this.chest : null;
   this.towers.forEach(function(tw) {
-    if (tw.atk <= 0 || tw.ar <= 0 || !alive.length) return;
+    if (tw.dead || tw.atk <= 0 || tw.ar <= 0) return;
+    var chstD = chst ? Math.hypot(chst.x - tw.x, chst.y - tw.y) : Infinity;
+    if (!alive.length && !(chst && chstD < 260)) return;
     if (!self.towerAtk[tw.uid]) self.towerAtk[tw.uid] = now;
     if (now - self.towerAtk[tw.uid] < tw.ar) return;
     self.towerAtk[tw.uid] = now;
@@ -484,11 +518,15 @@ Game.prototype.updateTowers = function(dt, now) {
       var d = Math.hypot(m.x - tw.x, m.y - tw.y);
       if (d < 260 && d < bestD) { best = m; bestD = d; }
     });
-    if (!best) return;
-    best.hp -= tw.atk;
-    self.fx.push({x1:tw.x, y1:tw.y, x2:best.x, y2:best.y, l:200, c:'#ffaa00'});
-    self.fl(best.x, best.y, '-'+tw.atk, '#ffaa00');
-    if (best.hp <= 0) self.kill(best);
+    if (chst && chstD < 260 && chstD < bestD) {
+      self.fx.push({x1:tw.x, y1:tw.y, x2:chst.x, y2:chst.y, l:200, c:'#ff8800'});
+      self.dmgChest(tw.atk);
+    } else if (best) {
+      best.hp -= tw.atk;
+      self.fx.push({x1:tw.x, y1:tw.y, x2:best.x, y2:best.y, l:200, c:'#ffaa00'});
+      self.fl(best.x, best.y, '-'+tw.atk, '#ffaa00');
+      if (best.hp <= 0) self.kill(best);
+    }
   });
 };
 
@@ -524,10 +562,17 @@ Game.prototype.awardBreedPet = function(def) {
   if (def.hi > 0) this.ptim[instance.uid] = n;
   var ang = Math.random() * Math.PI * 2;
   instance.x = p.x + Math.cos(ang)*55; instance.y = p.y + Math.sin(ang)*45;
+  instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
   this.pets.push(instance);
   this.floats.push({x:p.x, y:p.y-50, t:'🧬 '+def.e+' '+def.n+' bred!', c:'#ff80ff', l:2200});
   sndBuyPet();
+};
+
+Game.prototype.killPet = function(pt) {
+  pt.hp = 0; pt.dead = true;
+  this.burst(pt.x, pt.y, '#ff4444', 8);
+  this.floats.push({x:pt.x, y:pt.y-30, t:'💀 '+pt.e+' '+pt.n+' fell!', c:'#ff6644', l:2800});
 };
 
 Game.prototype.update = function(dt) {
@@ -561,13 +606,34 @@ Game.prototype.update = function(dt) {
           var hitBlocked = false;
           for (var si = 0; si < self.pets.length; si++) {
             var shp = self.pets[si];
-            if (shp.sc > 0 && shp.x !== undefined && Math.hypot(shp.x-m.x, shp.y-m.y) < 90 && Math.random() < shp.sc) { hitBlocked = true; break; }
+            if (!shp.dead && shp.sc > 0 && shp.x !== undefined && Math.hypot(shp.x-m.x, shp.y-m.y) < 90 && Math.random() < shp.sc) { hitBlocked = true; break; }
           }
           if (hitBlocked) { self.fl(p.x, p.y, 'BLOCKED!', '#40d8ff'); return; }
           p.hp = Math.max(0, p.hp - m.atk); p.inv = 350;
           self.burst(p.x, p.y, '#ff3333', 6); self.fl(p.x, p.y, '-' + m.atk, '#ff4444');
           if (p.hp <= 0) { self.dead = true; self.showDead(); }
         }
+      }
+    }
+    // Attack nearby pets/towers
+    m.pat -= dt * 1000;
+    if (m.pat <= 0) {
+      var nearPet = null, nearPetD = 32;
+      self.pets.forEach(function(pet) {
+        if (pet.dead || pet.x === undefined) return;
+        var d = Math.hypot(m.x - pet.x, m.y - pet.y);
+        if (d < nearPetD) { nearPet = pet; nearPetD = d; }
+      });
+      self.towers.forEach(function(tw) {
+        if (tw.dead) return;
+        var d = Math.hypot(m.x - tw.x, m.y - tw.y);
+        if (d < nearPetD) { nearPet = tw; nearPetD = d; }
+      });
+      if (nearPet) {
+        m.pat = Math.max(700, 1200 - self.lv * 12);
+        nearPet.hp = Math.max(0, nearPet.hp - m.atk);
+        self.fl(nearPet.x, nearPet.y - 8, '-' + m.atk, '#ff6644');
+        if (nearPet.hp <= 0) self.killPet(nearPet);
       }
     }
   });
@@ -587,14 +653,6 @@ Game.prototype.update = function(dt) {
   this.fx     = this.fx.filter(function(f)      { f.l -= dt*1000; return f.l > 0; });
   this.mons   = this.mons.filter(function(m)    { return !m.dead; });
 
-  // Chest proximity — open when guardian is dead and player walks to it
-  if (this.chest && !this.chest.open && !this.alreadyOwned) {
-    var guardAlive = this.mons.some(function(m) { return m.isGuardian; });
-    if (!guardAlive && Math.hypot(p.x - this.chest.x, p.y - this.chest.y) < 36) {
-      this.openChest();
-    }
-  }
-
   var chestDone = !this.chest || this.chest.open || this.alreadyOwned;
   if (this.mons.length === 0 && chestDone && !this.trans) {
     this.trans = true;
@@ -611,6 +669,13 @@ Game.prototype.update = function(dt) {
   this.hud();
 };
 
+Game.prototype.dmgChest = function(dmg) {
+  if (!this.chest || this.chest.open) return;
+  this.chest.hp = Math.max(0, this.chest.hp - dmg);
+  this.fl(this.chest.x, this.chest.y - 22, '-' + dmg, '#ff8800');
+  if (this.chest.hp <= 0) this.openChest();
+};
+
 Game.prototype.doAtk = function() {
   var p = this.p, dmg = 20 + this.lv + 8 * this.upg.attack, self = this;
   this.mons.forEach(function(m) {
@@ -620,6 +685,10 @@ Game.prototype.doAtk = function() {
     self.fl(m.x, m.y, '-' + dmg, '#fff');
     if (m.hp <= 0) self.kill(m);
   });
+  if (this.chest && !this.chest.open && Math.hypot(this.chest.x-p.x, this.chest.y-p.y) < 68) {
+    this.dmgChest(dmg);
+    this.fx.push({x1:p.x, y1:p.y, x2:this.chest.x, y2:this.chest.y, l:180, c:'#ff8800'});
+  }
   this.burst(p.x + p.dir*26, p.y, '#fff', 3);
 };
 
@@ -628,7 +697,7 @@ Game.prototype.kill  = function(m) {
   this.gems += m.gem; this.score += m.gem*10;
   this.burst(m.x, m.y, '#ffd700', 10); this.fl(m.x, m.y, '+' + m.gem + '💎', '#ffd700'); sndKill();
   if (m.isGuardian && this.chest && !this.chest.open) {
-    this.floats.push({x:this.chest.x, y:this.chest.y-35, t:'📦 Walk to the chest!', c:'#ffd700', l:3500});
+    this.floats.push({x:this.chest.x, y:this.chest.y-35, t:'⚔️ Attack the chest!', c:'#ff8800', l:3500});
   }
 };
 Game.prototype.burst = function(x, y, c, n) { for (var i = 0; i < n; i++) { var a = Math.random()*Math.PI*2, s = 40+Math.random()*80; this.parts.push({x:x, y:y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, c:c, l:350+Math.random()*280, sz:2+Math.random()*2.5}); } };
@@ -647,6 +716,7 @@ Game.prototype.awardFreePet = function(lv) {
   if (chosen.hi > 0) this.ptim[instance.uid] = n;
   var ang = Math.random() * Math.PI * 2;
   instance.x = p.x + Math.cos(ang) * 50; instance.y = p.y + Math.sin(ang) * 40;
+  instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
   this.pets.push(instance);
   this.floats.push({x:p.x, y:p.y - 45, t:'🎁 ' + chosen.e + ' ' + chosen.n + ' joins!', c:'#ffd700', l:2200});
@@ -663,6 +733,7 @@ Game.prototype.openChest = function() {
   if (pet.hi > 0) this.ptim[instance.uid] = n;
   var ang = Math.random() * Math.PI * 2;
   instance.x = p.x + Math.cos(ang)*50; instance.y = p.y + Math.sin(ang)*40;
+  instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
   this.pets.push(instance);
   this.burst(this.chest.x, this.chest.y, '#ffd700', 25);
@@ -697,18 +768,20 @@ Game.prototype.hud = function() {
 
   var petCounts = {}, petOrder = [];
   this.pets.forEach(function(pt) {
-    if (!petCounts[pt.id]) { petCounts[pt.id] = {pt: pt, pets: 0, twr: 0}; petOrder.push(pt.id); }
-    petCounts[pt.id].pets++;
+    if (!petCounts[pt.id]) { petCounts[pt.id] = {pt: pt, pets: 0, twr: 0, dead: 0}; petOrder.push(pt.id); }
+    if (pt.dead) petCounts[pt.id].dead++; else petCounts[pt.id].pets++;
   });
   this.towers.forEach(function(tw) {
-    if (!petCounts[tw.id]) { petCounts[tw.id] = {pt: tw, pets: 0, twr: 0}; petOrder.push(tw.id); }
-    petCounts[tw.id].twr++;
+    if (!petCounts[tw.id]) { petCounts[tw.id] = {pt: tw, pets: 0, twr: 0, dead: 0}; petOrder.push(tw.id); }
+    if (tw.dead) petCounts[tw.id].dead++; else petCounts[tw.id].twr++;
   });
   document.getElementById('petbar').innerHTML = petOrder.map(function(id) {
-    var entry = petCounts[id], total = entry.pets + entry.twr;
+    var entry = petCounts[id], alive = entry.pets + entry.twr, total = alive + entry.dead;
     var badge = total > 1 ? '<span class="pcnt">' + total + '</span>' : '';
     var twrBadge = entry.twr > 0 ? '<span class="ptwr">🗼</span>' : '';
-    return '<div class="pi" title="' + entry.pt.n + (total > 1 ? ' x'+total : '') + (entry.twr > 0 ? ' ('+entry.twr+' tower'+(entry.twr>1?'s':'')+')' : '') + '">' + entry.pt.e + badge + twrBadge + '</div>';
+    var deadBadge = entry.dead > 0 && alive === 0 ? '<span class="pdead">💀</span>' : '';
+    var dim = alive === 0 && entry.dead > 0 ? ' style="opacity:0.38"' : '';
+    return '<div class="pi"' + dim + ' title="' + entry.pt.n + (total > 1 ? ' x'+total : '') + (entry.dead > 0 ? ' ('+entry.dead+' dead)' : '') + '">' + entry.pt.e + badge + twrBadge + deadBadge + '</div>';
   }).join('');
 
   document.getElementById('lvlmap').textContent = '[' + Array.from({length: 50}, function(_, i) {
@@ -755,17 +828,23 @@ Game.prototype.draw = function() {
   if (this.chest && !this.chest.open) {
     ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('📦', this.chest.x, this.chest.y);
+    // HP bar
+    var cbw = 44, cbx = this.chest.x - cbw/2, cby = this.chest.y - 30;
+    ctx.fillStyle = '#500'; ctx.fillRect(cbx, cby, cbw, 5);
+    ctx.fillStyle = '#ff8800';
+    ctx.fillRect(cbx, cby, cbw * (this.chest.hp / this.chest.mhp), 5);
     var guardAlive = this.mons.some(function(m) { return m.isGuardian; });
     if (!guardAlive) {
       var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 220);
       ctx.globalAlpha = pulse;
-      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(this.chest.x, this.chest.y, 22, 0, Math.PI*2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
   }
 
   this.towers.forEach(function(tw) {
+    if (tw.dead) return;
     // range ring
     ctx.globalAlpha = 0.13;
     ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 1;
@@ -779,6 +858,12 @@ Game.prototype.draw = function() {
     ctx.fillText('🗼', tw.x, tw.y - 16);
     ctx.font = '16px serif';
     ctx.fillText(tw.e, tw.x, tw.y + 2);
+    // HP bar
+    if (tw.mhp && tw.hp < tw.mhp) {
+      var bw = 28, bx = tw.x - bw/2, by = tw.y - 27;
+      ctx.fillStyle = '#500'; ctx.fillRect(bx, by, bw, 3);
+      ctx.fillStyle = '#44ff66'; ctx.fillRect(bx, by, Math.max(0, bw * (tw.hp/tw.mhp)), 3);
+    }
   });
 
   this.mons.forEach(function(m) {
@@ -806,9 +891,14 @@ Game.prototype.draw = function() {
   }
 
   this.pets.forEach(function(pt) {
-    if (pt.x === undefined) return;
+    if (pt.x === undefined || pt.dead) return;
     ctx.font = '14px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(pt.e, pt.x, pt.y);
+    if (pt.mhp && pt.hp < pt.mhp) {
+      var bw = 22, bx = pt.x - bw/2, by = pt.y - 14;
+      ctx.fillStyle = '#500'; ctx.fillRect(bx, by, bw, 3);
+      ctx.fillStyle = '#44ff66'; ctx.fillRect(bx, by, Math.max(0, bw * (pt.hp/pt.mhp)), 3);
+    }
   });
 
   this.parts.forEach(function(pt) {
@@ -826,7 +916,7 @@ Game.prototype.draw = function() {
     ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(canvas.width/2-170, canvas.height-66, 340, 50);
     ctx.fillStyle = '#d8c0f8'; ctx.font = '14px Courier New'; ctx.textAlign = 'center';
     ctx.fillText('Arrow keys / WASD = move   SPACE = attack', canvas.width/2, canvas.height-49);
-    ctx.fillText('Kill 💀 guardian → open 📦 chest to get a wild pet & advance!', canvas.width/2, canvas.height-30);
+    ctx.fillText('Kill 💀 guardian → ⚔️ attack 📦 chest to open it & get a wild pet!', canvas.width/2, canvas.height-30);
   } else if (Date.now() - this.t0 >= 9000) {
     this.help = false;
   }
@@ -973,6 +1063,7 @@ function buyPet(id) {
   var ang = Math.random() * Math.PI * 2;
   instance.x = G.p.x + Math.cos(ang) * (40 + Math.random()*30);
   instance.y = G.p.y + Math.sin(ang) * (30 + Math.random()*25);
+  instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
   sndBuyPet();
   renderShop();
@@ -987,6 +1078,7 @@ function placeTower(id) {
   instance.uid = id + '_tower_' + Date.now() + '_' + Math.floor(Math.random()*99999);
   var pos = G.rf();
   instance.x = pos.x; instance.y = pos.y;
+  instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   G.towerAtk[instance.uid] = Date.now();
   G.towers.push(instance);
   G.floats.push({x:G.p.x, y:G.p.y-45, t:'🗼 '+pt.e+' '+pt.n+' placed!', c:'#ffaa00', l:2000});
