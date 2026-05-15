@@ -1,0 +1,112 @@
+const express = require('express');
+const fs      = require('fs');
+const path    = require('path');
+
+const app  = express();
+const PORT = 5500;
+const DB   = path.join(__dirname, 'accounts.json');
+
+app.use(express.json());
+app.use(express.static(__dirname));
+
+// ── In-memory presence & chat ─────────────────────────────────────────────
+var online = {};  // { name: lastSeenTimestamp }
+var chats  = {};  // { 'roomId': [{from, msg, time}] }
+
+function chatRoom(a, b) { return [a, b].sort().join('__'); }
+function isOnline(name) { return !!(online[name] && Date.now() - online[name] < 30000); }
+
+// ── DB helpers ────────────────────────────────────────────────────────────
+function load() {
+  try { return JSON.parse(fs.readFileSync(DB, 'utf8')); } catch(e) { return {}; }
+}
+function save(data) { fs.writeFileSync(DB, JSON.stringify(data, null, 2)); }
+
+// ── Static accounts ───────────────────────────────────────────────────────
+app.get('/api/accounts', (req, res) => {
+  var db  = load();
+  var pub = {};
+  Object.keys(db).forEach(n => {
+    pub[n] = { rubies: db[n].rubies, homePets: db[n].homePets, highestLevel: db[n].highestLevel };
+  });
+  res.json(pub);
+});
+
+app.post('/api/login', (req, res) => {
+  var { name, password } = req.body;
+  var db = load();
+  if (!db[name])                      return res.json({ ok: false, error: 'Account not found.' });
+  if (db[name].password !== password) return res.json({ ok: false, error: 'Wrong password.' });
+  var acc = Object.assign({}, db[name]);
+  delete acc.password;
+  res.json({ ok: true, account: acc });
+});
+
+app.post('/api/register', (req, res) => {
+  var { name, password } = req.body;
+  if (!name || name.length < 2)         return res.json({ ok: false, error: 'Name must be 2+ characters.' });
+  if (!password || password.length < 3) return res.json({ ok: false, error: 'Password must be 3+ characters.' });
+  var db = load();
+  if (db[name]) return res.json({ ok: false, error: 'Name already taken.' });
+  db[name] = {
+    password, rubies: 0, homePets: [], highestLevel: 0, lastWorked: 0,
+    shopItems: { speed: 0, attack: 0, petluck: 0, potion: 0 }
+  };
+  save(db);
+  var acc = Object.assign({}, db[name]);
+  delete acc.password;
+  res.json({ ok: true, account: acc });
+});
+
+app.post('/api/accounts/:name', (req, res) => {
+  var { name } = req.params;
+  var { password, data } = req.body;
+  var db = load();
+  if (!db[name] || db[name].password !== password) return res.json({ ok: false, error: 'Auth failed.' });
+  db[name] = Object.assign({}, db[name], data, { password: db[name].password });
+  save(db);
+  res.json({ ok: true });
+});
+
+// ── Presence ──────────────────────────────────────────────────────────────
+app.post('/api/ping', (req, res) => {
+  var { name, password } = req.body;
+  var db = load();
+  if (!db[name] || db[name].password !== password) return res.json({ ok: false });
+  online[name] = Date.now();
+  res.json({ ok: true });
+});
+
+app.get('/api/online', (req, res) => {
+  var alive = {};
+  Object.keys(online).forEach(n => { if (isOnline(n)) alive[n] = true; });
+  res.json(alive);
+});
+
+// ── Chat ──────────────────────────────────────────────────────────────────
+app.post('/api/chat/:room', (req, res) => {
+  var { room } = req.params;
+  var { name, password, msg } = req.body;
+  var db = load();
+  if (!db[name] || db[name].password !== password) return res.json({ ok: false });
+  if (!msg || !msg.trim()) return res.json({ ok: false });
+  if (!chats[room]) chats[room] = [];
+  chats[room].push({ from: name, msg: msg.trim().slice(0, 200), time: Date.now() });
+  if (chats[room].length > 100) chats[room] = chats[room].slice(-100);
+  res.json({ ok: true });
+});
+
+app.get('/api/chat/:room', (req, res) => {
+  var { room } = req.params;
+  var since = parseInt(req.query.since) || 0;
+  res.json((chats[room] || []).filter(m => m.time > since));
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────
+app.listen(PORT, '0.0.0.0', () => {
+  var os = require('os');
+  var ip = Object.values(os.networkInterfaces()).flat().find(i => i.family === 'IPv4' && !i.internal);
+  console.log('Animal Friend RPG running!');
+  console.log('  Local:   http://localhost:' + PORT);
+  if (ip) console.log('  Network: http://' + ip.address + ':' + PORT + '  ← share with friends on same WiFi');
+});
