@@ -2,11 +2,129 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Animal Friend RPG - 50 Levels & 50 Pets</title>
+<title>Animal Friend RPG</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="wrap">
+
+<!-- ── Auth ─────────────────────────────────────────────── -->
+<div id="screen-auth" class="meta-screen">
+  <div class="meta-card">
+    <div class="meta-logo">🐾</div>
+    <div class="meta-title">Animal Friend RPG</div>
+    <div class="meta-subtitle">Catch pets · Fight monsters · Rule the arena</div>
+    <input id="auth-name" class="meta-input" placeholder="Your name" maxlength="20" />
+    <input id="auth-pass" class="meta-input" type="password" placeholder="Password" maxlength="30" />
+    <div id="auth-err" class="meta-err"></div>
+    <div class="meta-row">
+      <button class="btn meta-btn" onclick="doLogin()">▶ Login</button>
+      <button class="btn meta-btn btng" onclick="doCreate()">✦ Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Hub ──────────────────────────────────────────────── -->
+<div id="screen-hub" class="meta-screen" style="display:none">
+  <div class="hub-wrap">
+    <div class="hub-header">
+      <div class="hub-user">👤 <span id="hub-user">Player</span></div>
+      <div class="hub-stats">
+        <span id="hub-rubies" class="hub-rubies">0 🔴</span>
+        <span id="hub-best" class="hub-best">Best: Level 0/50</span>
+      </div>
+      <button class="btn hub-logout" onclick="doLogout()">Logout</button>
+    </div>
+    <div class="hub-home-section">
+      <div class="hub-section-title">🏠 Home Pets</div>
+      <div id="hub-pets" class="hub-pets-grid"></div>
+    </div>
+    <div class="hub-actions">
+      <button class="hub-action-btn" onclick="playLevels()">
+        <span class="hab-icon">⚔️</span>
+        <span class="hab-label">Levels</span>
+        <span class="hab-desc">Fight monsters, collect pets<br><small>Win all 50 → +50 🔴</small></span>
+      </button>
+      <button class="hub-action-btn" onclick="showArena()">
+        <span class="hab-icon">🏆</span>
+        <span class="hab-label">Arena</span>
+        <span class="hab-desc">Battle other players<br><small>Win → +100 🔴</small></span>
+      </button>
+      <button class="hub-action-btn" onclick="showMetaShop()">
+        <span class="hab-icon">🛒</span>
+        <span class="hab-label">Shop</span>
+        <span class="hab-desc">Spend rubies on buffs<br><small>Boosts for your next run</small></span>
+      </button>
+      <button class="hub-action-btn" onclick="showWork()">
+        <span class="hab-icon">💼</span>
+        <span class="hab-label">Work</span>
+        <span class="hab-desc">Serve another player<br><small>+50 🔴 + 3 home pets</small></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Arena ────────────────────────────────────────────── -->
+<div id="screen-arena" class="meta-screen" style="display:none">
+  <div class="meta-card arena-card">
+    <div class="meta-title">🏆 Arena</div>
+    <div class="arena-my-section">
+      <div class="arena-side-title">Your Home Pets</div>
+      <div id="arena-my-pets" class="arena-pets"></div>
+    </div>
+    <div class="work-players-label" style="margin-top:10px">Choose opponent:</div>
+    <div id="arena-players-list" class="work-players-list"></div>
+    <div id="arena-preview" style="display:none;width:100%;margin-top:8px">
+      <div class="arena-vs-row">
+        <div class="arena-side">
+          <div class="arena-side-title" id="arena-opp-name">Opponent</div>
+          <div id="arena-opp-pets" class="arena-pets"></div>
+        </div>
+      </div>
+      <button class="btn" style="margin-top:10px" onclick="doArenaFight()">⚔️ Fight!</button>
+    </div>
+    <div id="arena-result" class="arena-result"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Meta Shop ─────────────────────────────────────────── -->
+<div id="screen-meta-shop" class="meta-screen" style="display:none">
+  <div class="meta-card shop-card">
+    <div class="meta-title">🛒 Shop</div>
+    <div class="shop-rubies">Rubies: <span id="meta-shop-rubies">0 🔴</span></div>
+    <div id="meta-shop-grid" class="meta-shop-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Work ─────────────────────────────────────────────── -->
+<div id="screen-work" class="meta-screen" style="display:none">
+  <div class="meta-card">
+    <div class="meta-title">💼 Work</div>
+    <div class="work-desc">Serve a real player — play levels and earn <strong>+25 🔴 rubies</strong> + 🐰🐭🐢 home pets!</div>
+    <div class="work-players-label">Players you can work for:</div>
+    <div id="work-players-list" class="work-players-list">Loading…</div>
+    <input id="work-employer" class="meta-input" placeholder="Or type a player name" maxlength="20" />
+    <div id="work-result"></div>
+    <button class="btn" onclick="doWork()">💼 Start Working</button>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Run Result ────────────────────────────────────────── -->
+<div id="screen-result" class="meta-screen" style="display:none">
+  <div class="meta-card">
+    <div id="result-title" class="result-title">💀 You Died</div>
+    <div id="result-level"  class="result-level"></div>
+    <div id="result-rubies" class="result-rubies"></div>
+    <div id="result-pets"   class="result-pets"></div>
+    <button class="btn btng" onclick="playLevels()">▶ Play Again</button>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Game ──────────────────────────────────────────────── -->
+<div id="wrap" style="display:none">
   <canvas id="c"></canvas>
 
   <div id="hud">
@@ -17,6 +135,21 @@
     <div class="stat"><div class="lbl">SCORE</div><span id="stxt">0</span></div>
     <div class="stat"><div class="lbl">ENEMIES</div><span id="etxt" style="color:#ff7070">0</span></div>
     <div class="stat" style="margin-left:auto"><div class="lbl">PETS</div><div id="petbar"></div></div>
+    <button class="btn hud-exit-btn" onclick="metaReturn(false)">🏠 Hub</button>
+  </div>
+
+  <!-- Chat panel (work mode only) -->
+  <div id="chat-panel" style="display:none">
+    <div class="chat-header" onclick="toggleChat()">
+      💬 <span id="chat-panel-name"></span>
+      <span class="chat-toggle">▲</span>
+    </div>
+    <div id="chat-msgs" class="chat-msgs"></div>
+    <div class="chat-input-row">
+      <input id="chat-input" class="chat-input" placeholder="Message…" maxlength="200"
+             onkeydown="if(event.key==='Enter')sendWorkChat()" />
+      <button class="chat-send" onclick="sendWorkChat()">Send</button>
+    </div>
   </div>
 
   <div id="banner"></div>
@@ -36,17 +169,18 @@
     <div class="otitle" style="color:#ff5050">💀 YOU DIED</div>
     <div style="color:#c888e0;font-size:14px;margin-bottom:6px">Level reached: <span id="glvl" style="color:#ffd700"></span></div>
     <div style="color:#c888e0;font-size:14px;margin-bottom:18px">Gems collected: <span id="ggems" style="color:#ffd700"></span></div>
-    <button class="btn" onclick="restart()">Try Again</button>
+    <button class="btn" onclick="metaReturn(false)">🏠 Return to Hub</button>
   </div>
 
   <div id="wov">
     <div class="otitle" style="color:#ffd700">🏆 ULTIMATE CHAMPION!</div>
     <div style="color:#e090ff;font-size:14px;margin-bottom:8px">All 50 dungeons conquered!</div>
     <div style="color:#e090ff;font-size:14px;margin-bottom:18px">Final Score: <span id="wscore" style="color:#ffd700"></span></div>
-    <button class="btn btng" onclick="restart()">Play Again</button>
+    <button class="btn btng" onclick="metaReturn(true)">🏠 Return to Hub</button>
   </div>
 </div>
 
+<script src="meta.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

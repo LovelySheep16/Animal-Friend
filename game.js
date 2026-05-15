@@ -265,8 +265,16 @@ function petRole(pt) {
 }
 
 var keys = {};
-window.addEventListener('keydown', function(e) { keys[e.code] = true; e.preventDefault(); });
-window.addEventListener('keyup',   function(e) { keys[e.code] = false; });
+window.addEventListener('keydown', function(e) {
+  var tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  keys[e.code] = true; e.preventDefault();
+});
+window.addEventListener('keyup', function(e) {
+  var tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  keys[e.code] = false;
+});
 
 function petMaxHp(pt) {
   if (pt.cost > 0) return Math.max(50, Math.round(40 + pt.cost * 0.30));
@@ -656,7 +664,12 @@ Game.prototype.update = function(dt) {
   var chestDone = !this.chest || this.chest.open || this.alreadyOwned;
   if (this.mons.length === 0 && chestDone && !this.trans) {
     this.trans = true;
-    if (this.lv < 49) {
+    if (this.arenaMode) {
+      this.win = true;
+      this.floats.push({x: this.p.x, y: this.p.y - 80, t: '🏆 ARENA VICTORY!', c: '#ffd700', l: 2500});
+      sndLevelUp();
+      setTimeout(function() { metaReturn(true); }, 2200);
+    } else if (this.lv < 49) {
       if (Math.random() < Math.min(0.80, 0.20 + 0.08 * this.upg.petluck)) this.awardFreePet(this.lv);
       this.lv++; this.showBanner(); sndLevelUp();
       var s2 = this; setTimeout(function() { s2.build(); s2.trans = false; }, 1800);
@@ -1092,6 +1105,94 @@ function restart() {
   G = new Game();
 }
 
+function metaReturn(won) {
+  document.getElementById('gov').style.display = 'none';
+  document.getElementById('wov').style.display = 'none';
+  if (!G) { if (window.showHub) window.showHub(); return; }
+  if (G.arenaMode) {
+    var bredPets = (G.pets || []).filter(function(p) {
+      return !G.arenaInitialPetUIDs || !G.arenaInitialPetUIDs[p.uid];
+    });
+    if (window.META_onArenaEnd) window.META_onArenaEnd(won, bredPets);
+    else if (window.showHub) window.showHub();
+  } else if (G.workMode) {
+    if (window.META_onWorkEnd) window.META_onWorkEnd(G.workEmployer || '');
+    else if (window.showHub) window.showHub();
+  } else if (window.META_onRunEnd) {
+    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], (G.lv || 0) + (won ? 1 : 0));
+  } else {
+    restart();
+  }
+}
+
+window.META_startGame = function (config) {
+  G = new Game();
+  if (!config) return;
+  if (config.speed)   G.upg.speed   += config.speed;
+  if (config.attack)  G.upg.attack  += config.attack  * 2;
+  if (config.petluck) G.upg.petluck += config.petluck * 2;
+  for (var i = 0; i < (config.potion || 0); i++) { G.p.mhp += 30; G.p.hp = Math.min(G.p.hp + 30, G.p.mhp); }
+};
+
+window.META_startWork = function (employerName, employerOnline) {
+  G = new Game();
+  G.workMode     = true;
+  G.workEmployer = employerName;
+  if (window.META_showChatIfOnline) window.META_showChatIfOnline(employerName, employerOnline);
+};
+
+window.META_startArena = function (myPets, oppPets, oppName) {
+  G = new Game();
+  G.arenaMode = true;
+  G.chest = null; G.chestPet = null; G.alreadyOwned = true;
+
+  // Add home pets to the player's party
+  var now = Date.now();
+  (myPets || []).forEach(function (p, i) {
+    var inst = {}, k;
+    for (k in p) inst[k] = p[k];
+    inst.uid = p.id + '_arena_' + now + '_' + i;
+    inst.mhp = petMaxHp(inst); inst.hp = inst.mhp; inst.dead = false;
+    inst.wdx = 0; inst.wdy = 0; inst.wtim = 0; inst.healMode = false;
+    var ang = (i / Math.max(1, myPets.length)) * Math.PI * 2;
+    inst.x = G.p.x + Math.cos(ang) * 55; inst.y = G.p.y + Math.sin(ang) * 40;
+    G.patk[inst.uid] = now;
+    if (p.hi > 0) G.ptim[inst.uid] = now;
+    G.pets.push(inst);
+  });
+
+  // Convert opponent pets into arena monsters
+  var arenaMons = [];
+  (oppPets || []).forEach(function (p) {
+    var hp  = Math.max(80,  (p.atk || 0) * 4 + (p.heal || 0) * 3 + Math.round((p.sc || 0) * 200) + 80);
+    var atk = Math.max(8,   (p.atk || 0) + Math.round((p.sc || 0) * 40));
+    var pos = G.rf();
+    arenaMons.push({
+      t: p.n, e: p.e, hp: hp, mhp: hp, atk: atk, spd: 80 + Math.floor(Math.random() * 40),
+      gem: 0, x: pos.x, y: pos.y, at: 0, pat: 0, mt: 0, dx: 0, dy: 0, dead: false
+    });
+  });
+
+  // Opponent player as boss
+  var bossHp = 300 + (oppPets || []).length * 60;
+  var bossPos = G.rf();
+  arenaMons.push({
+    t: oppName, e: '👤', hp: bossHp, mhp: bossHp, atk: 22, spd: 95,
+    gem: 0, x: bossPos.x, y: bossPos.y, at: 0, pat: 0, mt: 0, dx: 0, dy: 0, dead: false
+  });
+
+  G.mons = arenaMons;
+
+  // Record which pets were brought from home so bred pets can be identified later
+  G.arenaInitialPetUIDs = {};
+  G.pets.forEach(function(p) { G.arenaInitialPetUIDs[p.uid] = true; });
+
+  var el = document.getElementById('banner');
+  el.textContent = '⚔️ ARENA vs ' + oppName;
+  el.style.opacity = '1';
+  setTimeout(function () { el.style.opacity = '0'; }, 2000);
+};
+
 var last = 0;
 function loop(ts) {
   var dt = Math.min((ts - last) / 1000, .05);
@@ -1099,4 +1200,4 @@ function loop(ts) {
   if (G) { G.update(dt); ctx.clearRect(0, 0, canvas.width, canvas.height); G.draw(); }
   requestAnimationFrame(loop);
 }
-rsz(); G = new Game(); requestAnimationFrame(function(ts) { last = ts; loop(ts); });
+rsz(); requestAnimationFrame(function(ts) { last = ts; loop(ts); });
