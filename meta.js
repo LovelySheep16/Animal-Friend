@@ -24,7 +24,7 @@
     if (!s) return;
     s.account = acc;
     saveSession(s);
-    apiPost('/api/accounts/' + encodeURIComponent(s.name), { password: s.password, data: acc });
+    apiPost('/api/accounts/' + encodeURIComponent(s.name), { data: acc });
   }
 
   function ensureItems(acc) {
@@ -45,7 +45,7 @@
   function stopPing() { if (_pingInt) { clearInterval(_pingInt); _pingInt = null; } }
   function doPing() {
     var s = getSession();
-    if (s) apiPost('/api/ping', { name: s.name, password: s.password }).catch(function() {});
+    if (s) apiPost('/api/ping', { name: s.name }).catch(function() {});
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
@@ -67,29 +67,23 @@
   function setErr(msg) { document.getElementById('auth-err').textContent = msg; }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  window.doLogin = function () {
+  window.doPlay = function () {
     var name = document.getElementById('auth-name').value.trim();
-    var pass = document.getElementById('auth-pass').value;
-    if (!name || !pass) { setErr('Fill in both fields.'); return; }
-    setErr('Logging in…');
-    apiPost('/api/login', { name: name, password: pass })
+    if (!name) { setErr('Enter your name.'); return; }
+    setErr('Loading…');
+    apiPost('/api/login', { name: name })
       .then(function(res) {
-        if (!res.ok) { setErr(res.error || 'Login failed.'); return; }
-        saveSession({ name: name, password: pass, account: ensureItems(res.account) });
-        setErr(''); startPing(); showHub();
-      }).catch(function() { setErr('Cannot reach server.'); });
-  };
-
-  window.doCreate = function () {
-    var name = document.getElementById('auth-name').value.trim();
-    var pass = document.getElementById('auth-pass').value;
-    if (!name || !pass) { setErr('Fill in both fields.'); return; }
-    setErr('Creating account…');
-    apiPost('/api/register', { name: name, password: pass })
-      .then(function(res) {
-        if (!res.ok) { setErr(res.error || 'Failed.'); return; }
-        saveSession({ name: name, password: pass, account: ensureItems(res.account) });
-        setErr(''); startPing(); showHub();
+        if (res.ok) {
+          saveSession({ name: name, account: ensureItems(res.account) });
+          setErr(''); startPing(); showHub();
+        } else {
+          // Name not found — create it
+          return apiPost('/api/register', { name: name }).then(function(res2) {
+            if (!res2.ok) { setErr(res2.error || 'Failed.'); return; }
+            saveSession({ name: name, account: ensureItems(res2.account) });
+            setErr(''); startPing(); showHub();
+          });
+        }
       }).catch(function() { setErr('Cannot reach server.'); });
   };
 
@@ -372,7 +366,7 @@
         // Post a system message so the employer sees who is working for them
         if (employerOnline) {
           apiPost('/api/chat/' + window._workChatRoom, {
-            name: s.name, password: s.password,
+            name: s.name,
             msg: '🔔 ' + s.name + ' has started working for you!'
           }).catch(function() {});
         }
@@ -457,7 +451,7 @@
     var msg  = inp.value.trim();
     var room = window._workChatRoom;
     inp.value = '';
-    apiPost('/api/chat/' + room, { name: s.name, password: s.password, msg: msg }).catch(function() {});
+    apiPost('/api/chat/' + room, { name: s.name, msg: msg }).catch(function() {});
   };
 
   window.toggleChat = function () {

@@ -13,12 +13,11 @@
     <div class="meta-logo">🐾</div>
     <div class="meta-title">Animal Friend RPG</div>
     <div class="meta-subtitle">Catch pets · Fight monsters · Rule the arena</div>
-    <input id="auth-name" class="meta-input" placeholder="Your name" maxlength="20" />
-    <input id="auth-pass" class="meta-input" type="password" placeholder="Password" maxlength="30" />
+    <input id="auth-name" class="meta-input" placeholder="Your name" maxlength="20"
+           onkeydown="if(event.key==='Enter')doPlay()" />
     <div id="auth-err" class="meta-err"></div>
     <div class="meta-row">
-      <button class="btn meta-btn" onclick="doLogin()">▶ Login</button>
-      <button class="btn meta-btn btng" onclick="doCreate()">✦ Create Account</button>
+      <button class="btn meta-btn btng" onclick="doPlay()">▶ Play</button>
     </div>
   </div>
 </div>
