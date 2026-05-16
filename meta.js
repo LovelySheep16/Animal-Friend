@@ -1,61 +1,129 @@
 (function () {
   'use strict';
 
-  // ── Session ───────────────────────────────────────────────────────────────
-  var SESSION   = null;
-  var _pingInt  = null;
-  var _chatInt  = null;
-  var _chatLast = 0;
+  // ── Local save (localStorage, no account/name needed) ────────────────────
+  var SAVE_KEY = 'af_save';
+  var _account = null;
 
-  function loadSession() { try { return JSON.parse(sessionStorage.getItem('af_s') || 'null'); } catch(e) { return null; } }
-  function saveSession(s) { SESSION = s; try { sessionStorage.setItem('af_s', JSON.stringify(s)); } catch(e) {} }
-  function clearSession()  { SESSION = null; try { sessionStorage.removeItem('af_s'); } catch(e) {} }
-  function getSession()    { return SESSION || loadSession(); }
-
-  // ── API ───────────────────────────────────────────────────────────────────
-  function apiPost(url, body) {
-    return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
-      .then(function(r) { return r.json(); });
+  function loadAccount() {
+    try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch(e) { return null; }
   }
-  function apiGet(url) { return fetch(url).then(function(r) { return r.json(); }); }
-
   function saveAccount(acc) {
-    var s = getSession();
-    if (!s) return;
-    s.account = acc;
-    saveSession(s);
-    apiPost('/api/accounts/' + encodeURIComponent(s.name), { data: acc });
+    _account = acc;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(acc)); } catch(e) {}
   }
+  function getAccount() { return _account; }
+
+  var SERVANTS = [
+    // ── Knights ───────────────────────────────────────────────────────────
+    {id:'squire',     e:'🛡️', n:'Squire',          rph:3,   pph:0,    cost:30,   cat:'⚔️ Knights'},
+    {id:'soldier',    e:'⚔️', n:'Soldier',          rph:6,   pph:0,    cost:60,   cat:'⚔️ Knights'},
+    {id:'knight',     e:'🏇', n:'Knight',           rph:10,  pph:0,    cost:100,  cat:'⚔️ Knights'},
+    {id:'eliteknight',e:'⚔️', n:'Elite Knight',     rph:16,  pph:0,    cost:160,  cat:'⚔️ Knights'},
+    {id:'paladin',    e:'🌟', n:'Paladin',          rph:24,  pph:0,    cost:240,  cat:'⚔️ Knights'},
+    {id:'champion',   e:'🏆', n:'Champion',         rph:34,  pph:0.05, cost:340,  cat:'⚔️ Knights'},
+    {id:'warlord',    e:'🗡️', n:'Warlord',          rph:46,  pph:0.05, cost:460,  cat:'⚔️ Knights'},
+    {id:'hero',       e:'🦸', n:'Hero',             rph:60,  pph:0.1,  cost:600,  cat:'⚔️ Knights'},
+    {id:'legend',     e:'👑', n:'Legend',           rph:78,  pph:0.1,  cost:780,  cat:'⚔️ Knights'},
+    {id:'eternalknight',e:'✨',n:'Eternal Knight',  rph:100, pph:0.15, cost:1000, cat:'⚔️ Knights'},
+    // ── Robots ────────────────────────────────────────────────────────────
+    {id:'basicbot',   e:'🤖', n:'Basic Bot',        rph:4,   pph:0,    cost:40,   cat:'🤖 Robots'},
+    {id:'workerbot',  e:'🔧', n:'Worker Bot',       rph:8,   pph:0,    cost:80,   cat:'🤖 Robots'},
+    {id:'guardbot',   e:'🤖', n:'Guard Bot',        rph:13,  pph:0,    cost:130,  cat:'🤖 Robots'},
+    {id:'combatbot',  e:'⚙️', n:'Combat Bot',       rph:20,  pph:0,    cost:200,  cat:'🤖 Robots'},
+    {id:'miningbot',  e:'⛏️', n:'Mining Bot',       rph:28,  pph:0.05, cost:280,  cat:'🤖 Robots'},
+    {id:'advancedbot',e:'🤖', n:'Advanced Bot',     rph:38,  pph:0.05, cost:380,  cat:'🤖 Robots'},
+    {id:'nanobot',    e:'🔬', n:'Nano Bot',         rph:50,  pph:0.1,  cost:500,  cat:'🤖 Robots'},
+    {id:'mechwarrior',e:'🦾', n:'Mech Warrior',     rph:65,  pph:0.1,  cost:650,  cat:'🤖 Robots'},
+    {id:'quantumbot', e:'🌀', n:'Quantum Bot',      rph:83,  pph:0.15, cost:830,  cat:'🤖 Robots'},
+    {id:'omnibot',    e:'🌌', n:'Omni Bot',         rph:105, pph:0.2,  cost:1050, cat:'🤖 Robots'},
+    // ── Witches ───────────────────────────────────────────────────────────
+    {id:'apprentice', e:'🪄', n:'Apprentice',       rph:5,   pph:0.1,  cost:50,   cat:'🧙 Witches'},
+    {id:'hedgewitch', e:'🌿', n:'Hedge Witch',      rph:10,  pph:0.15, cost:100,  cat:'🧙 Witches'},
+    {id:'mage',       e:'🔮', n:'Mage',             rph:15,  pph:0.2,  cost:150,  cat:'🧙 Witches'},
+    {id:'sorcerer',   e:'🌙', n:'Sorcerer',         rph:22,  pph:0.25, cost:220,  cat:'🧙 Witches'},
+    {id:'warlock',    e:'🌑', n:'Warlock',          rph:30,  pph:0.3,  cost:300,  cat:'🧙 Witches'},
+    {id:'enchanter',  e:'✨', n:'Enchanter',        rph:40,  pph:0.35, cost:400,  cat:'🧙 Witches'},
+    {id:'archmage',   e:'📖', n:'Archmage',         rph:52,  pph:0.4,  cost:520,  cat:'🧙 Witches'},
+    {id:'grandwitch', e:'🧙', n:'Grand Witch',      rph:66,  pph:0.45, cost:660,  cat:'🧙 Witches'},
+    {id:'mystic',     e:'🌟', n:'Mystic',           rph:83,  pph:0.5,  cost:830,  cat:'🧙 Witches'},
+    {id:'cosmicmage', e:'🌌', n:'Cosmic Mage',      rph:105, pph:0.6,  cost:1050, cat:'🧙 Witches'},
+    // ── Healers ───────────────────────────────────────────────────────────
+    {id:'nurse',      e:'💊', n:'Nurse',            rph:6,   pph:0.05, cost:60,   cat:'💊 Healers'},
+    {id:'medic',      e:'🏥', n:'Medic',            rph:11,  pph:0.1,  cost:110,  cat:'💊 Healers'},
+    {id:'herbalist',  e:'🌿', n:'Herbalist',        rph:17,  pph:0.15, cost:170,  cat:'💊 Healers'},
+    {id:'shaman',     e:'🪬', n:'Shaman',           rph:24,  pph:0.2,  cost:240,  cat:'💊 Healers'},
+    {id:'druid',      e:'🌳', n:'Druid',            rph:33,  pph:0.25, cost:330,  cat:'💊 Healers'},
+    {id:'oracle',     e:'👁️', n:'Oracle',           rph:43,  pph:0.3,  cost:430,  cat:'💊 Healers'},
+    {id:'highpriest', e:'🙏', n:'High Priest',      rph:55,  pph:0.35, cost:550,  cat:'💊 Healers'},
+    {id:'angel',      e:'😇', n:'Angel',            rph:70,  pph:0.4,  cost:700,  cat:'💊 Healers'},
+    {id:'seraph',     e:'✨', n:'Seraph',           rph:88,  pph:0.45, cost:880,  cat:'💊 Healers'},
+    {id:'divine',     e:'🌟', n:'Divine Being',     rph:110, pph:0.5,  cost:1100, cat:'💊 Healers'},
+    // ── Legends ───────────────────────────────────────────────────────────
+    {id:'goblinmerch',e:'👺', n:'Goblin Merchant',  rph:12,  pph:0.1,  cost:120,  cat:'🌟 Legends'},
+    {id:'dragonrider',e:'🐉', n:'Dragon Rider',     rph:20,  pph:0.15, cost:200,  cat:'🌟 Legends'},
+    {id:'phoenix',    e:'🦅', n:'Phoenix',          rph:30,  pph:0.2,  cost:300,  cat:'🌟 Legends'},
+    {id:'centaur',    e:'🏇', n:'Centaur',          rph:42,  pph:0.25, cost:420,  cat:'🌟 Legends'},
+    {id:'djinn',      e:'🌪️', n:'Djinn',            rph:56,  pph:0.3,  cost:560,  cat:'🌟 Legends'},
+    {id:'titan',      e:'🗿', n:'Titan',            rph:72,  pph:0.35, cost:720,  cat:'🌟 Legends'},
+    {id:'ancientdragon',e:'🐲',n:'Ancient Dragon',  rph:90,  pph:0.4,  cost:900,  cat:'🌟 Legends'},
+    {id:'celestial',  e:'🌟', n:'Celestial',        rph:111, pph:0.45, cost:1110, cat:'🌟 Legends'},
+    {id:'deity',      e:'👁️', n:'Deity',            rph:135, pph:0.5,  cost:1350, cat:'🌟 Legends'},
+    {id:'cosmicbeing',e:'🌌', n:'Cosmic Being',     rph:165, pph:0.6,  cost:1650, cat:'🌟 Legends'},
+  ];
+  window.SERVANTS = SERVANTS;
 
   function ensureItems(acc) {
     if (!acc.shopItems)    acc.shopItems    = { speed:0, attack:0, petluck:0, potion:0 };
     if (!acc.homePets)     acc.homePets     = [];
     if (!acc.rubies)       acc.rubies       = 0;
     if (!acc.highestLevel) acc.highestLevel = 0;
-    if (!acc.lastWorked)   acc.lastWorked   = 0;
+    if (!acc.weapons)           acc.weapons           = {};
+    if (!acc.activeWeapon)      acc.activeWeapon      = null;
+    if (!acc.servants)          acc.servants          = {};
+    if (!acc.lastServantCollect)acc.lastServantCollect = Date.now();
     return acc;
   }
 
-  // ── Presence ping ─────────────────────────────────────────────────────────
-  function startPing() {
-    stopPing();
-    doPing();
-    _pingInt = setInterval(doPing, 12000);
+function speciesCount(acc, petId) {
+    return acc.homePets.filter(function(p) { return p.id === petId; }).length;
   }
-  function stopPing() { if (_pingInt) { clearInterval(_pingInt); _pingInt = null; } }
-  function doPing() {
-    var s = getSession();
-    if (s) apiPost('/api/ping', { name: s.name }).catch(function() {});
+
+  function petStrength(p) {
+    return (p.cost || 0) + (p.atk || 0) * 2 + (p.heal || 0) + Math.round((p.sc || 0) * 100);
+  }
+
+  function pickBattlePets(homePets) {
+    var seen = {};
+    var passed = (homePets || []).filter(function(p) {
+      if (seen[p.id]) return false;
+      var str    = petStrength(p);
+      var chance = 0.25 / (1 + str / 100);
+      if (Math.random() >= chance) return false;
+      seen[p.id] = true;
+      return true;
+    });
+    return passed.sort(function(a, b) { return petStrength(b) - petStrength(a); }).slice(0, 5);
+  }
+
+  function getWeaponConfig(acc) {
+    var id = acc.activeWeapon;
+    if (!id || !acc.weapons[id]) return {};
+    var weapons = window.WEAPONS || [];
+    var w = null;
+    for (var i = 0; i < weapons.length; i++) { if (weapons[i].id === id) { w = weapons[i]; break; } }
+    if (!w) return {};
+    var COLORS = { Close:'#ff6644', Medium:'#ffd700', Far:'#44ddff', 'Very Far':'#88ff88', Magic:'#dd88ff' };
+    return { weaponDmg: w.dmg, weaponRange: w.range, weaponLevel: acc.weapons[id], weaponColor: COLORS[w.cat] || '#fff' };
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-auth','screen-hub','screen-arena','screen-work','screen-meta-shop','screen-result'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
     var wrap = document.getElementById('wrap');
     if (wrap) wrap.style.display = 'none';
-    hideChatPanel();
     if (id === 'game') {
       if (wrap) wrap.style.display = 'block';
     } else {
@@ -64,39 +132,12 @@
     }
   }
 
-  function setErr(msg) { document.getElementById('auth-err').textContent = msg; }
-
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  window.doPlay = function () {
-    var name = document.getElementById('auth-name').value.trim();
-    if (!name) { setErr('Enter your name.'); return; }
-    setErr('Loading…');
-    apiPost('/api/login', { name: name })
-      .then(function(res) {
-        if (res.ok) {
-          saveSession({ name: name, account: ensureItems(res.account) });
-          setErr(''); startPing(); showHub();
-        } else {
-          // Name not found — create it
-          return apiPost('/api/register', { name: name }).then(function(res2) {
-            if (!res2.ok) { setErr(res2.error || 'Failed.'); return; }
-            saveSession({ name: name, account: ensureItems(res2.account) });
-            setErr(''); startPing(); showHub();
-          });
-        }
-      }).catch(function() { setErr('Cannot reach server.'); });
-  };
-
-  window.doLogout = function () { stopPing(); clearSession(); showScreen('screen-auth'); };
 
   // ── Hub ───────────────────────────────────────────────────────────────────
   function showHub() {
-    var s = getSession();
-    if (!s) { showScreen('screen-auth'); return; }
-    var acc = ensureItems(s.account);
-    document.getElementById('hub-user').textContent   = s.name;
+    var acc = ensureItems(getAccount());
     document.getElementById('hub-rubies').textContent = acc.rubies + ' 🔴';
-    document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel + '/50';
+    document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel;
     renderHomePets(acc.homePets);
     showScreen('screen-hub');
   }
@@ -112,149 +153,47 @@
 
   // ── Levels ────────────────────────────────────────────────────────────────
   window.playLevels = function () {
-    var s = getSession();
-    if (!s) return;
-    var acc = ensureItems(s.account);
-    var config = { speed: acc.shopItems.speed||0, attack: acc.shopItems.attack||0,
-                   petluck: acc.shopItems.petluck||0, potion: acc.shopItems.potion||0 };
+    var acc = ensureItems(getAccount());
+    var wc  = getWeaponConfig(acc);
+    var config = Object.assign({ speed: acc.shopItems.speed||0, attack: acc.shopItems.attack||0,
+                   petluck: acc.shopItems.petluck||0, potion: acc.shopItems.potion||0 }, wc);
     acc.shopItems = { speed:0, attack:0, petluck:0, potion:0 };
     saveAccount(acc);
     showScreen('game');
-    if (window.META_startGame) window.META_startGame(config);
+    if (window.META_startGame) window.META_startGame(config, pickBattlePets(acc.homePets));
   };
 
-  window.META_onRunEnd = function (won, pets, level) {
-    var s = getSession();
-    if (!s) return;
-    var acc = ensureItems(s.account);
-    var rubiesEarned  = won ? 50 : 0;
-    var petsGoingHome = [];
-    var hadEnough     = pets && pets.length >= 3;
+  window.META_onRunEnd = function (won, pets, level, homePetUIDs) {
+    var acc = ensureItems(getAccount());
     if (level > acc.highestLevel) acc.highestLevel = level;
-    if (hadEnough) {
-      pets.forEach(function(p) {
-        if (Math.random() < 0.30) {
-          var hp = { id:p.id, e:p.e, n:p.n, cat:p.cat||'', heal:p.heal||0, hi:p.hi||0, atk:p.atk||0, ar:p.ar||0, sc:p.sc||0, d:p.d||'' };
-          petsGoingHome.push(hp); acc.homePets.push(hp);
-        }
-      });
-    }
-    acc.rubies += rubiesEarned;
-    saveAccount(acc);
-    var titleEl = document.getElementById('result-title');
-    titleEl.textContent = won ? '🏆 You Won!' : '💀 You Died';
-    titleEl.style.color = won ? '#ffd700' : '#ff5050';
-    document.getElementById('result-level').textContent  = 'Level reached: ' + level + '/50';
-    document.getElementById('result-rubies').textContent = '+' + rubiesEarned + ' 🔴 rubies' + (won ? ' for completing all 50 floors!' : '');
-    var petsEl = document.getElementById('result-pets');
-    if (petsGoingHome.length > 0) {
-      petsEl.innerHTML = '<div class="result-pets-title">Pets that moved to your home:</div>' +
-        petsGoingHome.map(function(p) { return '<span class="result-pet">' + p.e + ' ' + p.n + '</span>'; }).join('');
-    } else if (!hadEnough) {
-      petsEl.innerHTML = '<div class="result-note">Need at least 3 pets for any to go home.</div>';
-    } else {
-      petsEl.innerHTML = '<div class="result-note">No pets went home this time (30% chance each).</div>';
-    }
-    showScreen('screen-result');
-  };
-
-  // ── Arena ─────────────────────────────────────────────────────────────────
-  window.showArena = function () {
-    var s = getSession();
-    if (!s) return;
-    var acc = ensureItems(s.account);
-    document.getElementById('arena-my-pets').innerHTML  = renderArenaPets(acc.homePets);
-    document.getElementById('arena-result').innerHTML   = '';
-    document.getElementById('arena-preview').style.display = 'none';
-    document.getElementById('arena-players-list').textContent = 'Loading players…';
-    showScreen('screen-arena');
-
-    Promise.all([apiGet('/api/accounts'), apiGet('/api/online')]).then(function(results) {
-      var accounts = results[0];
-      var online   = results[1];
-      var others   = Object.keys(accounts).filter(function(n) { return n !== s.name; });
-      var listEl   = document.getElementById('arena-players-list');
-      if (!others.length) {
-        listEl.innerHTML = '<div class="work-no-players">No other players yet — invite a friend to fight!</div>';
-        return;
-      }
-      window._arenaAccounts = accounts;
-      listEl.innerHTML = others.map(function(name) {
-        var isOnline = !!online[name];
-        var pets     = accounts[name].homePets || [];
-        var safeName = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        return '<div class="work-player-row" onclick="selectArenaOpponent(\'' + safeName + '\')">' +
-          '<span class="work-player-dot' + (isOnline ? ' online' : '') + '"></span>' +
-          '<span class="work-player-name">' + name + '</span>' +
-          '<span class="arena-player-pets">' + (pets.length ? pets.slice(0,5).map(function(p){ return p.e; }).join('') : '—') + '</span>' +
-          (isOnline ? '<span class="work-online-tag">● online</span>' : '') +
-          '</div>';
-      }).join('');
-    }).catch(function() {
-      document.getElementById('arena-players-list').textContent = 'Could not load players.';
-    });
-  };
-
-  window.selectArenaOpponent = function (name) {
-    var accounts = window._arenaAccounts || {};
-    var opp = { name: name, pets: (accounts[name] && accounts[name].homePets) || [] };
-    window._arenaOpp = opp;
-    document.getElementById('arena-opp-name').textContent = opp.name + '\'s Pets';
-    document.getElementById('arena-opp-pets').innerHTML   = renderArenaPets(opp.pets);
-    document.getElementById('arena-preview').style.display = 'block';
-  };
-
-  window.doArenaFight = function () {
-    var s   = getSession();
-    var opp = window._arenaOpp;
-    if (!s || !opp) return;
-    var acc = ensureItems(s.account);
-    if (!acc.homePets || !acc.homePets.length) {
-      document.getElementById('arena-result').innerHTML = '<div class="work-err">You need home pets to fight! Play levels first.</div>';
-      return;
-    }
-    showScreen('game');
-    if (window.META_startArena) window.META_startArena(acc.homePets, opp.pets, opp.name);
-  };
-
-  window.META_onArenaEnd = function (won, bredPets) {
-    var s   = getSession();
-    var opp = window._arenaOpp || { name: 'Opponent' };
-    if (!s) return;
-    var acc = ensureItems(s.account);
-    acc.rubies += won ? 100 : 0;
-
-    // Bred pets (pair-bred during arena) go to home
-    var homeBred = [];
-    if (bredPets && bredPets.length) {
-      bredPets.forEach(function(p) {
+    acc.rubies += level;
+    var petsGoingHome = [];
+    (pets || []).forEach(function(p) {
+      if (homePetUIDs && homePetUIDs[p.uid]) return;
+      if (Math.random() < 0.30 && speciesCount(acc, p.id) < 30) {
         var hp = { id:p.id, e:p.e, n:p.n, cat:p.cat||'', heal:p.heal||0, hi:p.hi||0, atk:p.atk||0, ar:p.ar||0, sc:p.sc||0, d:p.d||'' };
-        homeBred.push(hp);
-        acc.homePets.push(hp);
-      });
-    }
-
+        petsGoingHome.push(hp); acc.homePets.push(hp);
+      }
+    });
     saveAccount(acc);
-
     var titleEl = document.getElementById('result-title');
-    titleEl.textContent = won ? '🏆 Arena Victory!' : '💀 Arena Defeat';
-    titleEl.style.color = won ? '#ffd700' : '#ff5050';
-    document.getElementById('result-level').textContent  = won ? 'You defeated ' + opp.name + '!' : 'Defeated by ' + opp.name + '…';
-    document.getElementById('result-rubies').textContent = won ? '+100 🔴 rubies!' : 'No rubies this time.';
+    titleEl.textContent = '💀 You Died';
+    titleEl.style.color = '#ff5050';
+    document.getElementById('result-level').textContent  = 'Level reached: ' + level;
+    document.getElementById('result-rubies').textContent = '+' + level + ' 🔴 rubies';
     var petsEl = document.getElementById('result-pets');
-    if (homeBred.length) {
-      petsEl.innerHTML = '<div class="result-pets-title">Bred pets moving to your home:</div>' +
-        homeBred.map(function(p) { return '<span class="result-pet">' + p.e + ' ' + p.n + '</span>'; }).join('');
+    var homePetCount = Object.keys(homePetUIDs || {}).length;
+    if (petsGoingHome.length > 0) {
+      petsEl.innerHTML = '<div class="result-pets-title">New pets going home:</div>' +
+        petsGoingHome.map(function(p) { return '<span class="result-pet">' + p.e + ' ' + p.n + '</span>'; }).join('') +
+        (homePetCount ? '<div class="result-note">' + homePetCount + ' home pet(s) returned safely.</div>' : '');
     } else {
-      petsEl.innerHTML = '<div class="result-note">No pets bred this arena run. (Breed by having 2 of the same pet!)</div>';
+      petsEl.innerHTML = '<div class="result-note">' +
+        (homePetCount ? homePetCount + ' home pet(s) returned safely. ' : '') +
+        'No new pets this run.</div>';
     }
     showScreen('screen-result');
   };
-
-  function renderArenaPets(pets) {
-    if (!pets || !pets.length) return '<div class="arena-no-pets">No pets</div>';
-    return pets.map(function(p) { return '<span class="arena-pet" title="' + p.n + '">' + p.e + '</span>'; }).join('');
-  }
 
   // ── Meta Shop ─────────────────────────────────────────────────────────────
   var META_ITEMS = [
@@ -267,9 +206,7 @@
   window.showMetaShop = function () { renderMetaShop(); showScreen('screen-meta-shop'); };
 
   function renderMetaShop() {
-    var s = getSession();
-    if (!s) return;
-    var acc = ensureItems(s.account);
+    var acc = ensureItems(getAccount());
     document.getElementById('meta-shop-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('meta-shop-grid').innerHTML = META_ITEMS.map(function(item) {
       var owned  = acc.shopItems[item.id] || 0;
@@ -285,9 +222,7 @@
   }
 
   window.metaBuyItem = function (id) {
-    var s = getSession();
-    if (!s) return;
-    var acc  = ensureItems(s.account);
+    var acc  = ensureItems(getAccount());
     var item = META_ITEMS.find(function(i) { return i.id === id; });
     if (!item || acc.rubies < item.cost) return;
     acc.rubies -= item.cost;
@@ -295,180 +230,162 @@
     saveAccount(acc); renderMetaShop();
   };
 
-  // ── Work ──────────────────────────────────────────────────────────────────
-  window.showWork = function () {
-    document.getElementById('work-result').innerHTML  = '';
-    document.getElementById('work-employer').value    = '';
-    document.getElementById('work-players-list').textContent = 'Loading…';
-    showScreen('screen-work');
-
-    var s = getSession();
-    if (!s) return;
-
-    Promise.all([apiGet('/api/accounts'), apiGet('/api/online')]).then(function(results) {
-      var accounts = results[0];
-      var online   = results[1];
-      var others   = Object.keys(accounts).filter(function(n) { return n !== s.name; });
-      var listEl   = document.getElementById('work-players-list');
-      if (!others.length) {
-        listEl.innerHTML = '<div class="work-no-players">No other players yet — invite a friend!</div>';
-        return;
-      }
-      listEl.innerHTML = others.map(function(name) {
-        var isOnline = !!online[name];
-        return '<div class="work-player-row" onclick="pickWorkPlayer(\'' + name + '\')">' +
-          '<span class="work-player-dot' + (isOnline ? ' online' : '') + '"></span>' +
-          '<span class="work-player-name">' + name + '</span>' +
-          (isOnline ? '<span class="work-online-tag">● online</span>' : '') +
-          '</div>';
-      }).join('');
-    }).catch(function() {
-      document.getElementById('work-players-list').textContent = 'Could not load players.';
-    });
+  // ── Servants ──────────────────────────────────────────────────────────────
+  window.showServants = function () {
+    var acc = ensureItems(getAccount());
+    renderServants(acc);
+    showScreen('screen-servants');
   };
 
-  window.pickWorkPlayer = function(name) {
-    document.getElementById('work-employer').value = name;
-  };
-
-  window.doWork = function () {
-    var s = getSession();
-    if (!s) return;
-    var acc          = ensureItems(s.account);
-    var employerName = document.getElementById('work-employer').value.trim();
-    var resEl        = document.getElementById('work-result');
-
-    if (!employerName)           { resEl.innerHTML = '<div class="work-err">Enter a player name.</div>'; return; }
-    if (employerName === s.name) { resEl.innerHTML = '<div class="work-err">You can\'t work for yourself!</div>'; return; }
-
-    var now = Date.now();
-    if (acc.lastWorked && now - acc.lastWorked < 300000) {
-      var wait = Math.ceil((300000 - (now - acc.lastWorked)) / 1000);
-      resEl.innerHTML = '<div class="work-err">You need rest! ' + wait + 's cooldown remaining.</div>';
-      return;
-    }
-
-    resEl.innerHTML = '<div class="work-success">Checking player…</div>';
-
-    // Validate real player
-    apiGet('/api/accounts').then(function(accounts) {
-      if (!accounts[employerName]) {
-        resEl.innerHTML = '<div class="work-err">"' + employerName + '" doesn\'t exist. You can only work for real players!</div>';
-        return;
-      }
-      // Check if online for chat
-      apiGet('/api/online').then(function(onlinePlayers) {
-        var employerOnline = !!onlinePlayers[employerName];
-        window._workEmployer       = employerName;
-        window._workChatRoom       = [s.name, employerName].sort().join('__');
-        window._workEmployerOnline = employerOnline;
-
-        // Post a system message so the employer sees who is working for them
-        if (employerOnline) {
-          apiPost('/api/chat/' + window._workChatRoom, {
-            name: s.name,
-            msg: '🔔 ' + s.name + ' has started working for you!'
-          }).catch(function() {});
-        }
-
-        showScreen('game');
-        if (window.META_startWork) window.META_startWork(employerName, employerOnline);
+  function renderServants(acc) {
+    var rubEl = document.getElementById('servant-rubies');
+    if (rubEl) rubEl.textContent = acc.rubies + ' 🔴';
+    var pending = calcServantIncome(acc);
+    var pendEl = document.getElementById('servant-pending');
+    if (pendEl) pendEl.textContent = pending.rubies > 0 || pending.pets > 0
+      ? '📦 Ready to collect: +' + pending.rubies + ' 🔴' + (pending.pets > 0 ? ' · +' + pending.pets + ' pet(s)' : '')
+      : 'Servants are working… check back later!';
+    var grid = document.getElementById('servant-grid');
+    if (!grid) return;
+    var cats = ['⚔️ Knights','🤖 Robots','🧙 Witches','💊 Healers','🌟 Legends'];
+    var html = '';
+    cats.forEach(function(cat) {
+      html += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
+      SERVANTS.filter(function(sv) { return sv.cat === cat; }).forEach(function(sv) {
+        var owned   = acc.servants[sv.id] || 0;
+        var canBuy  = acc.rubies >= sv.cost;
+        var safeId  = sv.id.replace(/'/g, "\\'");
+        html += '<div class="weapon-item">' +
+          '<div class="weapon-emoji">' + sv.e + '</div>' +
+          '<div class="weapon-name">' + sv.n + '</div>' +
+          '<div class="weapon-stats">+' + sv.rph + ' 🔴/hr' + (sv.pph > 0 ? ' · ' + Math.round(sv.pph*100) + '% pet/hr' : '') + '</div>' +
+          (owned ? '<div class="weapon-level">Owned: ' + owned + '</div>' : '') +
+          '<div class="weapon-btns"><button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
+          (canBuy ? ' onclick="buyServant(\'' + safeId + '\')"' : ' disabled') + '>' +
+          'Buy ' + sv.cost + ' 🔴</button></div></div>';
       });
-    }).catch(function() {
-      resEl.innerHTML = '<div class="work-err">Server error. Is the server running?</div>';
+      html += '</div>';
     });
-  };
+    grid.innerHTML = html;
+  }
 
-  window.META_onWorkEnd = function (employerName) {
-    var s = getSession();
-    if (!s) return;
-    var acc = ensureItems(s.account);
+  function calcServantIncome(acc) {
+    var elapsed  = Math.min(24 * 3600000, Date.now() - (acc.lastServantCollect || Date.now()));
+    var hours    = elapsed / 3600000;
+    var rubies   = 0, pets = 0;
+    SERVANTS.forEach(function(sv) {
+      var count = acc.servants[sv.id] || 0;
+      if (!count) return;
+      rubies += Math.floor(sv.rph * count * hours);
+      pets   += Math.floor(sv.pph * count * hours);
+    });
+    return { rubies: rubies, pets: pets };
+  }
 
-    acc.rubies    += 25;
-    acc.lastWorked = Date.now();
-    acc.homePets   = acc.homePets.concat([
-      { id:'bunny',  e:'🐰', n:'Bunny',  cat:'🌿 Healers',   heal:6, hi:3000, atk:0, ar:0,    sc:0,    d:'Heals 6hp/3s'   },
-      { id:'mouse',  e:'🐭', n:'Mouse',  cat:'⚔️ Attackers', heal:0, hi:0,    atk:5, ar:800,  sc:0,    d:'5dmg very fast' },
-      { id:'turtle', e:'🐢', n:'Turtle', cat:'🛡️ Tanks',     heal:0, hi:0,    atk:3, ar:2000, sc:0.20, d:'Blocks 20% hits'}
-    ]);
+  window.buyServant = function (id) {
+    var acc = ensureItems(getAccount());
+    var sv  = SERVANTS.find(function(x) { return x.id === id; });
+    if (!sv || acc.rubies < sv.cost) return;
+    acc.rubies -= sv.cost;
+    acc.servants[id] = (acc.servants[id] || 0) + 1;
     saveAccount(acc);
-
-    var titleEl = document.getElementById('result-title');
-    titleEl.textContent = '💼 Work Done!';
-    titleEl.style.color = '#60dd60';
-    document.getElementById('result-level').textContent  = 'You worked for ' + employerName + '!';
-    document.getElementById('result-rubies').textContent = '+25 🔴 rubies earned!';
-    document.getElementById('result-pets').innerHTML =
-      '<div class="result-pets-title">New home pets:</div>' +
-      '<span class="result-pet">🐰 Bunny</span>' +
-      '<span class="result-pet">🐭 Mouse</span>' +
-      '<span class="result-pet">🐢 Turtle</span>';
-    showScreen('screen-result');
+    renderServants(acc);
   };
 
-  // ── Chat ──────────────────────────────────────────────────────────────────
-  function showChatPanel(employerName) {
-    var panel = document.getElementById('chat-panel');
-    document.getElementById('chat-panel-name').textContent = employerName;
-    document.getElementById('chat-msgs').innerHTML = '';
-    panel.style.display = 'flex';
-    _chatLast = 0;
-    pollChat();
-    _chatInt = setInterval(pollChat, 2500);
-  }
+  window.collectServants = function () {
+    var acc     = ensureItems(getAccount());
+    var income  = calcServantIncome(acc);
+    if (income.rubies === 0 && income.pets === 0) return;
+    acc.rubies += income.rubies;
+    var petPool = (window.PETS || []).slice(0, 15);
+    for (var i = 0; i < income.pets; i++) {
+      var p = petPool[Math.floor(Math.random() * petPool.length)];
+      if (speciesCount(acc, p.id) < 30) {
+        acc.homePets.push({ id:p.id, e:p.e, n:p.n, cat:p.cat||'', heal:p.heal||0, hi:p.hi||0, atk:p.atk||0, ar:p.ar||0, sc:p.sc||0, d:p.d||'' });
+      }
+    }
+    acc.lastServantCollect = Date.now();
+    saveAccount(acc);
+    renderServants(acc);
+  };
 
-  function hideChatPanel() {
-    var panel = document.getElementById('chat-panel');
-    if (panel) panel.style.display = 'none';
-    if (_chatInt) { clearInterval(_chatInt); _chatInt = null; }
-  }
+  // ── Weapon Shop ───────────────────────────────────────────────────────────
+  var WEAPON_CATS = ['Close','Medium','Far','Very Far','Magic'];
+  var WEAPON_CAT_LABELS = { Close:'⚔️ Close Range', Medium:'🔱 Medium Range', Far:'🪃 Far Range', 'Very Far':'🏹 Very Far Range', Magic:'🪄 Magic' };
 
-  function pollChat() {
-    var room = window._workChatRoom;
-    if (!room) return;
-    apiGet('/api/chat/' + room + '?since=' + _chatLast).then(function(msgs) {
-      if (!msgs.length) return;
-      var box = document.getElementById('chat-msgs');
-      msgs.forEach(function(m) {
-        var div = document.createElement('div');
-        div.className = 'chat-msg' + (m.from === getSession().name ? ' chat-mine' : '');
-        div.innerHTML = '<span class="chat-from">' + m.from + '</span> ' + escHtml(m.msg);
-        box.appendChild(div);
+  window.showWeapons = function () {
+    renderWeapons(ensureItems(getAccount()));
+    showScreen('screen-weapons');
+  };
+
+  function renderWeapons(acc) {
+    acc = ensureItems(acc);
+    var weapons = window.WEAPONS || [];
+    var el = document.getElementById('weapon-rubies');
+    if (el) el.textContent = acc.rubies + ' 🔴';
+    var activeId = acc.activeWeapon;
+    var grid = document.getElementById('weapon-grid');
+    if (!grid) return;
+    var html = '';
+    WEAPON_CATS.forEach(function(cat) {
+      html += '<div class="weapon-cat-title">' + WEAPON_CAT_LABELS[cat] + '</div>';
+      html += '<div class="weapon-cat-grid">';
+      weapons.filter(function(w) { return w.cat === cat; }).forEach(function(w) {
+        var owned = acc.weapons[w.id] || 0;
+        var isActive = activeId === w.id;
+        var canBuy = acc.rubies >= w.cost;
+        var lvl = owned || 0;
+        var safeName = w.id.replace(/'/g, "\\'");
+        html += '<div class="weapon-item' + (isActive ? ' weapon-active' : '') + '">' +
+          '<div class="weapon-emoji">' + w.e + '</div>' +
+          '<div class="weapon-name">' + w.n + '</div>' +
+          '<div class="weapon-stats">⚔️ ' + w.dmg * (lvl||1) + ' dmg &nbsp; 📏 ' + w.range + ' range</div>' +
+          (lvl > 1 ? '<div class="weapon-level">Level ' + lvl + ' (×' + lvl + ')</div>' : '') +
+          '<div class="weapon-btns">' +
+          (owned
+            ? '<button class="weapon-btn weapon-upgrade' + (canBuy ? '' : ' cant-buy') + '"' +
+              (canBuy ? ' onclick="buyWeapon(\'' + safeName + '\')"' : ' disabled') + '>' +
+              'Upgrade ' + w.cost + '🔴</button>' +
+              '<button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipWeapon(\'' + safeName + '\')">' +
+              (isActive ? '✓ Equipped' : 'Equip') + '</button>'
+            : '<button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
+              (canBuy ? ' onclick="buyWeapon(\'' + safeName + '\')"' : ' disabled') + '>' +
+              'Buy ' + w.cost + '🔴</button>'
+          ) +
+          '</div></div>';
       });
-      box.scrollTop = box.scrollHeight;
-      _chatLast = msgs[msgs.length - 1].time;
-    }).catch(function() {});
+      html += '</div>';
+    });
+    grid.innerHTML = html;
   }
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  window.sendWorkChat = function () {
-    var s   = getSession();
-    var inp = document.getElementById('chat-input');
-    if (!s || !inp || !inp.value.trim()) return;
-    var msg  = inp.value.trim();
-    var room = window._workChatRoom;
-    inp.value = '';
-    apiPost('/api/chat/' + room, { name: s.name, msg: msg }).catch(function() {});
+  window.buyWeapon = function (id) {
+    var acc = ensureItems(getAccount());
+    var weapons = window.WEAPONS || [];
+    var w = null;
+    for (var i = 0; i < weapons.length; i++) { if (weapons[i].id === id) { w = weapons[i]; break; } }
+    if (!w || acc.rubies < w.cost) return;
+    acc.rubies -= w.cost;
+    acc.weapons[id] = (acc.weapons[id] || 0) + 1;
+    if (!acc.activeWeapon) acc.activeWeapon = id;
+    saveAccount(acc);
+    renderWeapons(acc);
   };
 
-  window.toggleChat = function () {
-    var panel = document.getElementById('chat-panel');
-    if (!panel) return;
-    panel.classList.toggle('chat-collapsed');
-  };
-
-  // Called from game.js after META_startWork sets up the game
-  window.META_showChatIfOnline = function (employerName, isOnline) {
-    if (isOnline) showChatPanel(employerName);
+  window.equipWeapon = function (id) {
+    var acc = ensureItems(getAccount());
+    if (!acc.weapons[id]) return;
+    acc.activeWeapon = id;
+    saveAccount(acc);
+    renderWeapons(acc);
   };
 
   // ── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
-    SESSION = loadSession();
-    if (SESSION) { startPing(); showHub(); }
-    else showScreen('screen-auth');
+    var acc = loadAccount();
+    if (!acc) acc = {};
+    ensureItems(acc);
+    _account = acc;
+    showHub();
   });
 })();

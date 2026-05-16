@@ -60,6 +60,27 @@ app.post('/api/accounts/:name', (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Work reward (employer gets rubies + strongest pet) ────────────────────
+app.post('/api/work-reward/:name', (req, res) => {
+  var { name } = req.params;
+  var { rubies, pet } = req.body;
+  var db = load();
+  if (!db[name]) return res.json({ ok: false });
+  db[name].rubies = (db[name].rubies || 0) + (rubies || 0);
+  if (pet) db[name].homePets = (db[name].homePets || []).concat([pet]);
+  save(db);
+  res.json({ ok: true });
+});
+
+// ── Servant income collection ─────────────────────────────────────────────
+app.post('/api/collect/:name', (req, res) => {
+  var { name } = req.params;
+  var { servants, lastCollect } = req.body;
+  var db = load();
+  if (!db[name]) return res.json({ ok: false });
+  res.json({ ok: true, serverTime: Date.now() });
+});
+
 // ── Presence ──────────────────────────────────────────────────────────────
 app.post('/api/ping', (req, res) => {
   var { name } = req.body;
@@ -89,6 +110,58 @@ app.get('/api/chat/:room', (req, res) => {
   var { room } = req.params;
   var since = parseInt(req.query.since) || 0;
   res.json((chats[room] || []).filter(m => m.time > since));
+});
+
+// ── Trades ────────────────────────────────────────────────────────────────
+var tradeRequests = {}; // { targetName: [{ id, from, offer, want, ts }] }
+
+app.post('/api/trade/request', (req, res) => {
+  var { from, to, offer, want } = req.body;
+  if (!from || !to || !offer || !want) return res.json({ ok: false });
+  var db = load();
+  if (!db[from] || !db[to]) return res.json({ ok: false, error: 'Player not found.' });
+  if (!tradeRequests[to]) tradeRequests[to] = [];
+  // Remove old request from same sender
+  tradeRequests[to] = tradeRequests[to].filter(function(r) { return r.from !== from; });
+  tradeRequests[to].push({ id: Date.now() + '_' + from, from, offer, want, ts: Date.now() });
+  res.json({ ok: true });
+});
+
+app.get('/api/trade/pending/:name', (req, res) => {
+  var reqs = (tradeRequests[req.params.name] || []).filter(function(r) { return Date.now() - r.ts < 300000; });
+  tradeRequests[req.params.name] = reqs;
+  res.json(reqs);
+});
+
+app.post('/api/trade/respond', (req, res) => {
+  var { name, tradeId, accept } = req.body;
+  if (!name || !tradeId) return res.json({ ok: false });
+  var reqs = tradeRequests[name] || [];
+  var trade = reqs.find(function(r) { return r.id === tradeId; });
+  if (!trade) return res.json({ ok: false, error: 'Trade expired.' });
+  tradeRequests[name] = reqs.filter(function(r) { return r.id !== tradeId; });
+  if (!accept) return res.json({ ok: true, accepted: false });
+
+  var db = load();
+  var fromAcc = db[trade.from], toAcc = db[name];
+  if (!fromAcc || !toAcc) return res.json({ ok: false });
+
+  // Remove offered pets from sender
+  trade.offer.forEach(function(op) {
+    var idx = fromAcc.homePets.findIndex(function(p) { return p.id === op.id; });
+    if (idx >= 0) fromAcc.homePets.splice(idx, 1);
+  });
+  // Remove wanted pets from receiver
+  trade.want.forEach(function(wp) {
+    var idx = toAcc.homePets.findIndex(function(p) { return p.id === wp.id; });
+    if (idx >= 0) toAcc.homePets.splice(idx, 1);
+  });
+  // Swap
+  trade.offer.forEach(function(p) { toAcc.homePets.push(p); });
+  trade.want.forEach(function(p) { fromAcc.homePets.push(p); });
+
+  save(db);
+  res.json({ ok: true, accepted: true });
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────

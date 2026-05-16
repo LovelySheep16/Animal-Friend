@@ -247,14 +247,76 @@ var MONS = [
   {t:'Chaos Lord',   hp:1600, atk:158, spd:95,  gem:240, e:'☠️'},
 ];
 
+var WEAPONS = [
+  // ── Close range (range 55-68) — highest damage ───────────────────────────
+  {id:'stick',       e:'🪵', n:'Stick',           dmg:8,   range:55,  cost:5,   cat:'Close'},
+  {id:'dagger',      e:'🗡️', n:'Dagger',          dmg:18,  range:58,  cost:14,  cat:'Close'},
+  {id:'shortsword',  e:'⚔️', n:'Short Sword',     dmg:30,  range:60,  cost:25,  cat:'Close'},
+  {id:'handaxe',     e:'🪓', n:'Hand Axe',        dmg:44,  range:58,  cost:40,  cat:'Close'},
+  {id:'warhammer',   e:'🔨', n:'War Hammer',      dmg:60,  range:55,  cost:58,  cat:'Close'},
+  {id:'longsword',   e:'🗡️', n:'Longsword',       dmg:78,  range:62,  cost:80,  cat:'Close'},
+  {id:'battleaxe',   e:'🪓', n:'Battle Axe',      dmg:100, range:60,  cost:106, cat:'Close'},
+  {id:'maul',        e:'🔨', n:'Maul',            dmg:126, range:55,  cost:136, cat:'Close'},
+  {id:'greatsword',  e:'⚔️', n:'Greatsword',      dmg:158, range:65,  cost:172, cat:'Close'},
+  {id:'excalibur',   e:'✨', n:'Excalibur',       dmg:200, range:68,  cost:218, cat:'Close'},
+  // ── Medium range (range 85-110) ─────────────────────────────────────────
+  {id:'spear',       e:'🔱', n:'Spear',           dmg:20,  range:90,  cost:32,  cat:'Medium'},
+  {id:'trident',     e:'🔱', n:'Trident',         dmg:35,  range:95,  cost:52,  cat:'Medium'},
+  {id:'glaive',      e:'🗡️', n:'Glaive',          dmg:52,  range:98,  cost:75,  cat:'Medium'},
+  {id:'halberd',     e:'⚔️', n:'Halberd',         dmg:72,  range:100, cost:102, cat:'Medium'},
+  {id:'pike',        e:'🔱', n:'Pike',            dmg:94,  range:105, cost:134, cat:'Medium'},
+  {id:'warscythe',   e:'🌙', n:'War Scythe',      dmg:118, range:100, cost:170, cat:'Medium'},
+  {id:'naginata',    e:'⚔️', n:'Naginata',        dmg:146, range:105, cost:210, cat:'Medium'},
+  {id:'lance',       e:'🔱', n:'Lance',           dmg:178, range:110, cost:258, cat:'Medium'},
+  {id:'dragonspear', e:'🐉', n:'Dragon Spear',    dmg:215, range:108, cost:315, cat:'Medium'},
+  {id:'cosmiclance', e:'🌌', n:'Cosmic Lance',    dmg:260, range:110, cost:380, cat:'Medium'},
+  // ── Far range (range 130-158) ────────────────────────────────────────────
+  {id:'sling',       e:'🪃', n:'Sling',           dmg:10,  range:130, cost:18,  cat:'Far'},
+  {id:'throwknife',  e:'🗡️', n:'Throwing Knife',  dmg:20,  range:135, cost:34,  cat:'Far'},
+  {id:'boomerang',   e:'🪃', n:'Boomerang',       dmg:32,  range:138, cost:54,  cat:'Far'},
+  {id:'javelin',     e:'🏹', n:'Javelin',         dmg:46,  range:142, cost:78,  cat:'Far'},
+  {id:'chakram',     e:'⭕', n:'Chakram',         dmg:62,  range:145, cost:106, cat:'Far'},
+  {id:'throwaxe',    e:'🪓', n:'Throwing Axe',    dmg:80,  range:148, cost:138, cat:'Far'},
+  {id:'warfan',      e:'🌸', n:'War Fan',         dmg:100, range:150, cost:175, cat:'Far'},
+  {id:'bolas',       e:'⭕', n:'Bolas',           dmg:124, range:152, cost:216, cat:'Far'},
+  {id:'flyingdisc',  e:'🥏', n:'Flying Disc',     dmg:152, range:155, cost:265, cat:'Far'},
+  {id:'shurikens',   e:'⭐', n:'Shuriken Storm',  dmg:185, range:158, cost:320, cat:'Far'},
+  // ── Very far range (range 175-220) ──────────────────────────────────────
+  {id:'shortbow',    e:'🏹', n:'Short Bow',       dmg:12,  range:175, cost:24,  cat:'Very Far'},
+  {id:'crossbow',    e:'🏹', n:'Crossbow',        dmg:24,  range:185, cost:44,  cat:'Very Far'},
+  {id:'longbow',     e:'🏹', n:'Long Bow',        dmg:38,  range:195, cost:68,  cat:'Very Far'},
+  {id:'compoundbow', e:'🏹', n:'Compound Bow',    dmg:55,  range:198, cost:96,  cat:'Very Far'},
+  {id:'heavycross',  e:'🏹', n:'Heavy Crossbow',  dmg:74,  range:192, cost:128, cat:'Very Far'},
+  {id:'recurvebow',  e:'🏹', n:'Recurve Bow',     dmg:96,  range:204, cost:164, cat:'Very Far'},
+  {id:'warbow',      e:'🏹', n:'War Bow',         dmg:122, range:208, cost:207, cat:'Very Far'},
+  {id:'dragonbow',   e:'🐉', n:'Dragon Bow',      dmg:152, range:212, cost:256, cat:'Very Far'},
+  {id:'angelbow',    e:'😇', n:'Angel Bow',       dmg:188, range:215, cost:314, cat:'Very Far'},
+  {id:'heavensarrow',e:'✨', n:"Heaven's Arrow",  dmg:230, range:220, cost:380, cat:'Very Far'},
+  // ── Magic range (range 200-260) ─────────────────────────────────────────
+  {id:'wand',        e:'🪄', n:'Magic Wand',      dmg:14,  range:200, cost:28,  cat:'Magic'},
+  {id:'firestaff',   e:'🔥', n:'Fire Staff',      dmg:28,  range:215, cost:50,  cat:'Magic'},
+  {id:'icestaff',    e:'❄️', n:'Ice Staff',       dmg:44,  range:220, cost:74,  cat:'Magic'},
+  {id:'thunderstaff',e:'⚡', n:'Thunder Staff',   dmg:62,  range:228, cost:102, cat:'Magic'},
+  {id:'darkorb',     e:'🔮', n:'Dark Orb',        dmg:82,  range:232, cost:134, cat:'Magic'},
+  {id:'arcanetome',  e:'📖', n:'Arcane Tome',     dmg:105, range:238, cost:170, cat:'Magic'},
+  {id:'chaoswand',   e:'🌀', n:'Chaos Wand',      dmg:132, range:244, cost:212, cat:'Magic'},
+  {id:'soulstaff',   e:'👻', n:'Soul Staff',      dmg:162, range:250, cost:260, cat:'Magic'},
+  {id:'voidscepter', e:'🌑', n:'Void Scepter',    dmg:198, range:255, cost:316, cat:'Magic'},
+  {id:'cosmicstaff', e:'🌌', n:'Cosmic Staff',    dmg:240, range:260, cost:382, cat:'Magic'},
+];
+window.WEAPONS = WEAPONS;
+
 function lvlDef(lv) {
-  var zone = ZONES[Math.min(lv, 49)];
-  var pct = (lv + 1) / 50;
-  var pe = Math.min(MONS.length, Math.max(3, Math.ceil(pct * MONS.length)));
-  var ps = Math.max(0, pe - Math.min(10, pe));
-  var pool = MONS.slice(ps, pe);
-  var count = 7 + Math.floor(lv * 1.4);
-  return {name: zone.flag + ' Level ' + (lv + 1) + ': ' + zone.n, zone: zone, pool: pool, count: count, li: lv % 5};
+  var zoneLv = lv % 50;
+  var zone  = ZONES[zoneLv];
+  var loop  = Math.floor(lv / 50);
+  var pct   = (zoneLv + 1) / 50;
+  var pe    = Math.min(MONS.length, Math.max(3, Math.ceil(pct * MONS.length)));
+  var ps    = Math.max(0, pe - Math.min(10, pe));
+  var pool  = MONS.slice(ps, pe);
+  var count = 14 + Math.floor(lv * 2.8);
+  var loopLabel = loop > 0 ? ' (Loop ' + (loop + 1) + ')' : '';
+  return {name: zone.flag + ' Level ' + (lv + 1) + ': ' + zone.n + loopLabel, zone: zone, pool: pool, count: count, li: zoneLv % 5, loop: loop};
 }
 
 function petRole(pt) {
@@ -276,6 +338,35 @@ window.addEventListener('keyup', function(e) {
   keys[e.code] = false;
 });
 
+// Touch controls — drag to move, tap to attack
+var _touch = null;
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  var t = e.touches[0];
+  _touch = { sx: t.clientX, sy: t.clientY, moved: false };
+}, { passive: false });
+canvas.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  if (!_touch) return;
+  var t  = e.touches[0];
+  var dx = t.clientX - _touch.sx, dy = t.clientY - _touch.sy;
+  var dead = 18;
+  _touch.moved = Math.hypot(dx, dy) > dead;
+  keys['ArrowRight'] = dx >  dead;
+  keys['ArrowLeft']  = dx < -dead;
+  keys['ArrowDown']  = dy >  dead;
+  keys['ArrowUp']    = dy < -dead;
+}, { passive: false });
+canvas.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  if (_touch && !_touch.moved) {
+    keys['Space'] = true;
+    setTimeout(function() { keys['Space'] = false; }, 150);
+  }
+  keys['ArrowRight'] = keys['ArrowLeft'] = keys['ArrowDown'] = keys['ArrowUp'] = false;
+  _touch = null;
+}, { passive: false });
+
 function petMaxHp(pt) {
   if (pt.cost > 0) return Math.max(50, Math.round(40 + pt.cost * 0.30));
   return Math.max(60, Math.round(60 + (pt.atk || 0) * 1.5 + (pt.heal || 0) * 1.5));
@@ -293,6 +384,7 @@ function Game() {
   this.potionTick = 0;
   this.towers = []; this.towerAtk = {}; this.pairTimers = {};
   this.chest = null; this.chestPet = null; this.alreadyOwned = false;
+  this.volcano = null; this.lavaBlasts = []; this.volcanoCooldown = 0;
   this.build(); this.showBanner();
 }
 
@@ -303,9 +395,10 @@ Game.prototype.build = function() {
   this.p = {x: T*2+T/2, y: GT+T*2+T/2, hp: 100, mhp: 100, atk: false, at: 0, dir: 1, inv: 0};
   this.mons = this.spawnMons(); this.aa = 0;
 
-  // Chest setup
-  var ca = CHEST_ANIMALS[this.lv];
-  this.chestPet = makeChestPet(this.lv);
+  // Chest setup — cycle through 50 animals per loop
+  var chestLv = this.lv % 50;
+  var ca = CHEST_ANIMALS[chestLv];
+  this.chestPet = makeChestPet(chestLv);
   this.alreadyOwned = this.pets.some(function(pt) { return pt.id === ca.id; });
   this.chest = null;
   if (!this.alreadyOwned) {
@@ -321,11 +414,28 @@ Game.prototype.build = function() {
     });
   }
 
+  // Spawn 5 revival guards
+  var guardHpBase  = Math.round((400 + this.lv * 45) * (1 + Math.floor(this.lv/50) * 0.65));
+  var guardAtkBase = Math.round(28 + this.lv * 6);
+  for (var gi = 0; gi < 5; gi++) {
+    var gpos = this.rf();
+    this.mons.push({
+      t:'Guard', e:'🛡️', hp:guardHpBase, mhp:guardHpBase,
+      atk:guardAtkBase, spd:100, gem:15,
+      x:gpos.x, y:gpos.y, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isGuard:true
+    });
+  }
+
+  // Spawn volcano
+  var vpos = this.rf();
+  this.volcano = { x: vpos.x, y: vpos.y };
+  this.lavaBlasts = [];
+  this.volcanoCooldown = 4000; // first blast after 4s
+
   var n = Date.now();
   for (var i = 0; i < this.pets.length; i++) {
     var pt = this.pets[i];
-    if (pt.dead) { pt.dead = false; pt.hp = pt.mhp || petMaxHp(pt); }
-    if (!pt.mhp) { pt.mhp = petMaxHp(pt); pt.hp = pt.mhp; }
+    if (!pt.mhp) { pt.mhp = petMaxHp(pt); if (!pt.dead) pt.hp = pt.mhp; }
     if (!this.patk[pt.uid]) this.patk[pt.uid] = n;
     if (pt.hi > 0 && !this.ptim[pt.uid]) this.ptim[pt.uid] = n;
     var ang = (i / Math.max(1, this.pets.length)) * Math.PI * 2;
@@ -366,9 +476,11 @@ Game.prototype.genMap = function(li, C, R) {
 };
 
 Game.prototype.spawnMons = function() {
-  var hpSc  = 1 + this.lv * 0.12;   // HP doubles by lv~8, ~6x at lv50
-  var atkSc = 1 + this.lv * 0.10;   // ATK ~5x at lv50
-  var spdSc = 1 + this.lv * 0.014;  // speed +70% at lv50
+  var loop  = this.ld ? (this.ld.loop || 0) : Math.floor(this.lv / 50);
+  var lm    = 1 + loop * 0.65;      // each loop adds 65% more difficulty
+  var hpSc  = (1 + this.lv * 0.25)  * lm;
+  var atkSc = (1 + this.lv * 0.22)  * lm;
+  var spdSc = (1 + this.lv * 0.030) * lm;
   var pool = this.ld.pool, count = this.ld.count, arr = [];
   for (var i = 0; i < count; i++) {
     var md = pool[Math.floor(Math.random() * pool.length)], pos = this.rf();
@@ -450,11 +562,17 @@ Game.prototype.updatePets = function(dt, now) {
       }
     }
 
-    // Attacker: walk to nearest monster, or chest if it's closer
+    // Attacker: volcano distracts — pets walk to volcano first, then monsters/chest
     if (!moved && pt.atk > 0 && !pt.healMode) {
+      var vol = self.volcano;
       var chstW = (self.chest && !self.chest.open) ? self.chest : null;
       var chstWD = chstW ? Math.hypot(chstW.x-pt.x, chstW.y-pt.y) : Infinity;
-      if (alive.length) {
+      var volD  = vol ? Math.hypot(vol.x-pt.x, vol.y-pt.y) : Infinity;
+      // Volcano always draws pet attention
+      if (vol && volD < 300) {
+        if (volD > 32) self.mv(pt, (vol.x-pt.x)/volD, (vol.y-pt.y)/volD, APPROACH, dt);
+        moved = true;
+      } else if (alive.length) {
         var near = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
         var dn = Math.hypot(near.x-pt.x, near.y-pt.y);
         var wx = (chstW && chstWD < dn) ? chstW.x : near.x;
@@ -468,16 +586,23 @@ Game.prototype.updatePets = function(dt, now) {
       }
     }
 
-    // Attack trigger (from pet's own position)
+    // Attack trigger (from pet's own position) — volcano soaks attacks, can't die
     if (pt.atk > 0 && pt.ar > 0) {
+      var vol2 = self.volcano;
       var chstA = (self.chest && !self.chest.open) ? self.chest : null;
       var chstAD = chstA ? Math.hypot(chstA.x-pt.x, chstA.y-pt.y) : Infinity;
-      if (alive.length || (chstA && chstAD < 260)) {
+      var vol2D = vol2 ? Math.hypot(vol2.x-pt.x, vol2.y-pt.y) : Infinity;
+      var hasTarget = alive.length || (chstA && chstAD < 260) || (vol2 && vol2D < 260);
+      if (hasTarget) {
         if (!self.patk[uid]) self.patk[uid] = now;
         if (now - self.patk[uid] >= pt.ar) {
           self.patk[uid] = now;
           var fc = pt.id==='dragon'?'#ff7700':pt.id==='god'?'#ffff00':pt.id==='cerberus'?'#ff4400':'#70b0ff';
-          if (alive.length) {
+          // Volcano takes priority: absorbs attacks (no damage, just visual)
+          if (vol2 && vol2D < 260) {
+            self.fx.push({x1:pt.x, y1:pt.y, x2:vol2.x, y2:vol2.y, l:200, c:'#ff6600'});
+            self.fl(vol2.x, vol2.y - 10, '🔥', '#ff6600');
+          } else if (alive.length) {
             var tg = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
             var tgD = Math.hypot(tg.x-pt.x, tg.y-pt.y);
             if (chstA && chstAD < tgD && chstAD < 260) {
@@ -538,6 +663,69 @@ Game.prototype.updateTowers = function(dt, now) {
   });
 };
 
+Game.prototype.updateVolcano = function(dt, now) {
+  if (!this.volcano || this.dead || this.trans) return;
+  var self = this, p = this.p, vol = this.volcano;
+  var LAVA_RADIUS = 36, WARN_MS = 1600;
+
+  // Count down to next blast
+  this.volcanoCooldown -= dt * 1000;
+  if (this.volcanoCooldown <= 0) {
+    this.volcanoCooldown = 4500 + Math.random() * 2000;
+    // Closer to volcano = higher chance lava targets the player
+    var distToVol = Math.hypot(p.x - vol.x, p.y - vol.y);
+    var playerChance = Math.max(0.05, 1 - distToVol / 320);
+    var tx, ty;
+    if (Math.random() < playerChance) {
+      // Target near the player with a small spread
+      var spread = 30;
+      tx = p.x + (Math.random() - 0.5) * spread * 2;
+      ty = p.y + (Math.random() - 0.5) * spread * 2;
+    } else {
+      var target = this.rf();
+      tx = target.x; ty = target.y;
+    }
+    this.lavaBlasts.push({ x: tx, y: ty, warnUntil: now + WARN_MS, done: false });
+  }
+
+  // Process pending blasts
+  this.lavaBlasts = this.lavaBlasts.filter(function(b) {
+    if (b.done) return false;
+    if (now < b.warnUntil) return true; // still warning
+    b.done = true;
+    // Deal 200 damage to player if in range
+    if (Math.hypot(p.x - b.x, p.y - b.y) < LAVA_RADIUS) {
+      p.hp -= 200;
+      self.burst(b.x, b.y, '#ff4400', 18);
+      self.fl(b.x, b.y, '-200🔥', '#ff4400');
+      if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); }
+    } else {
+      self.burst(b.x, b.y, '#ff6600', 14);
+    }
+    // Deal 200 damage to pets in range
+    self.pets.forEach(function(pt) {
+      if (pt.dead || pt.x === undefined) return;
+      if (Math.hypot(pt.x - b.x, pt.y - b.y) < LAVA_RADIUS) {
+        pt.hp -= 200;
+        self.fl(pt.x, pt.y, '-200🔥', '#ff4400');
+        if (pt.hp <= 0) self.killPet(pt);
+      }
+    });
+    // Blast walls within 50px of impact (never removes border tiles)
+    for (var wr = 1; wr < self.R - 1; wr++) {
+      for (var wc = 1; wc < self.C - 1; wc++) {
+        if (!self.map[wr][wc]) continue;
+        var wx = wc * T + T / 2, wy = GT + wr * T + T / 2;
+        if (Math.hypot(wx - b.x, wy - b.y) < 50) {
+          self.map[wr][wc] = 0;
+          self.burst(wx, wy, '#cc4400', 6);
+        }
+      }
+    }
+    return false;
+  });
+};
+
 Game.prototype.checkPairBreeding = function(now) {
   var self = this, counts = {}, INTERVAL = 30000;
   this.pets.forEach(function(pt)  { counts[pt.id]  = (counts[pt.id]  || 0) + 1; });
@@ -550,7 +738,8 @@ Game.prototype.checkPairBreeding = function(now) {
         var def = PETS.find(function(p) { return p.id === id; }) ||
                   self.pets.find(function(p) { return p.id === id; }) ||
                   self.towers.find(function(t) { return t.id === id; });
-        if (def) self.awardBreedPet(def);
+        var pairs = Math.floor(counts[id] / 2);
+        for (var bi = 0; bi < pairs; bi++) { if (def) self.awardBreedPet(def); }
       }
     } else {
       delete self.pairTimers[id];
@@ -654,29 +843,35 @@ Game.prototype.update = function(dt) {
   var now = Date.now();
   this.updatePets(dt, now);
   this.updateTowers(dt, now);
+  this.updateVolcano(dt, now);
   this.checkPairBreeding(now);
 
   this.parts  = this.parts.filter(function(pt) { pt.x += pt.vx*.016; pt.y += pt.vy*.016; pt.l -= dt*1000; return pt.l > 0; });
   this.floats = this.floats.filter(function(f)  { f.y -= dt*42; f.l -= dt*1000; return f.l > 0; });
   this.fx     = this.fx.filter(function(f)      { f.l -= dt*1000; return f.l > 0; });
-  this.mons   = this.mons.filter(function(m)    { return !m.dead; });
+  // Process guardian revivals
+  var now2 = Date.now();
+  this.mons.forEach(function(m) {
+    if (!m.reviving) return;
+    if (now2 < m.reviveAt) return;
+    m.reviving = false;
+    var guard = m.reviveGuardRef;
+    if (guard && !guard.dead) {
+      m.x = guard.x + (Math.random()-0.5)*30;
+      m.y = guard.y + (Math.random()-0.5)*30;
+      m.hp = m.mhp; m.dead = false; m.at = 0; m.pat = 0;
+    }
+    m.reviveGuardRef = null;
+  });
+  this.mons = this.mons.filter(function(m) { return !m.dead || m.reviving; });
 
   var chestDone = !this.chest || this.chest.open || this.alreadyOwned;
   if (this.mons.length === 0 && chestDone && !this.trans) {
     this.trans = true;
-    if (this.arenaMode) {
-      this.win = true;
-      this.floats.push({x: this.p.x, y: this.p.y - 80, t: '🏆 ARENA VICTORY!', c: '#ffd700', l: 2500});
-      sndLevelUp();
-      setTimeout(function() { metaReturn(true); }, 2200);
-    } else if (this.lv < 49) {
+    {
       if (Math.random() < Math.min(0.80, 0.20 + 0.08 * this.upg.petluck)) this.awardFreePet(this.lv);
       this.lv++; this.showBanner(); sndLevelUp();
       var s2 = this; setTimeout(function() { s2.build(); s2.trans = false; }, 1800);
-    } else {
-      this.win = true;
-      document.getElementById('wscore').textContent = this.score;
-      document.getElementById('wov').style.display = 'flex';
     }
   }
   this.hud();
@@ -690,19 +885,24 @@ Game.prototype.dmgChest = function(dmg) {
 };
 
 Game.prototype.doAtk = function() {
-  var p = this.p, dmg = 20 + this.lv + 8 * this.upg.attack, self = this;
+  var p     = this.p;
+  var wdmg  = (this.weaponDmg  || 20) * (this.weaponLevel || 1);
+  var range = this.weaponRange || 68;
+  var dmg   = wdmg + this.lv + 8 * this.upg.attack;
+  var self  = this;
+  var atkColor = this.weaponColor || '#fff';
   this.mons.forEach(function(m) {
-    if (m.dead || Math.hypot(m.x-p.x, m.y-p.y) > 68) return;
+    if (m.dead || Math.hypot(m.x-p.x, m.y-p.y) > range) return;
     m.hp -= dmg;
-    self.fx.push({x1:p.x, y1:p.y, x2:m.x, y2:m.y, l:180, c:'#fff'});
-    self.fl(m.x, m.y, '-' + dmg, '#fff');
+    self.fx.push({x1:p.x, y1:p.y, x2:m.x, y2:m.y, l:180, c:atkColor});
+    self.fl(m.x, m.y, '-' + dmg, atkColor);
     if (m.hp <= 0) self.kill(m);
   });
-  if (this.chest && !this.chest.open && Math.hypot(this.chest.x-p.x, this.chest.y-p.y) < 68) {
+  if (this.chest && !this.chest.open && Math.hypot(this.chest.x-p.x, this.chest.y-p.y) < range) {
     this.dmgChest(dmg);
     this.fx.push({x1:p.x, y1:p.y, x2:this.chest.x, y2:this.chest.y, l:180, c:'#ff8800'});
   }
-  this.burst(p.x + p.dir*26, p.y, '#fff', 3);
+  this.burst(p.x + p.dir*26, p.y, atkColor, 3);
 };
 
 Game.prototype.kill  = function(m) {
@@ -711,6 +911,15 @@ Game.prototype.kill  = function(m) {
   this.burst(m.x, m.y, '#ffd700', 10); this.fl(m.x, m.y, '+' + m.gem + '💎', '#ffd700'); sndKill();
   if (m.isGuardian && this.chest && !this.chest.open) {
     this.floats.push({x:this.chest.x, y:this.chest.y-35, t:'⚔️ Attack the chest!', c:'#ff8800', l:3500});
+  } else if (!m.isGuardian && !m.isGuard) {
+    var liveGuards = [];
+    for (var gi = 0; gi < this.mons.length; gi++) {
+      if (this.mons[gi].isGuard && !this.mons[gi].dead && !this.mons[gi].reviving) liveGuards.push(this.mons[gi]);
+    }
+    if (liveGuards.length) {
+      var pickedGuard = liveGuards[Math.floor(Math.random() * liveGuards.length)];
+      m.reviving = true; m.reviveAt = Date.now() + 3500; m.reviveGuardRef = pickedGuard;
+    }
   }
 };
 Game.prototype.burst = function(x, y, c, n) { for (var i = 0; i < n; i++) { var a = Math.random()*Math.PI*2, s = 40+Math.random()*80; this.parts.push({x:x, y:y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, c:c, l:350+Math.random()*280, sz:2+Math.random()*2.5}); } };
@@ -718,7 +927,7 @@ Game.prototype.fl    = function(x, y, t, c) { this.floats.push({x:x, y:y, t:t, c
 
 Game.prototype.awardFreePet = function(lv) {
   var sorted = PETS.slice().sort(function(a,b){ return a.cost - b.cost; });
-  var idx = Math.round((lv / 49) * (sorted.length - 1));
+  var idx = Math.round(((lv % 50) / 49) * (sorted.length - 1));
   var lo = Math.max(0, idx - 1), hi = Math.min(sorted.length - 1, idx + 1);
   var chosen = sorted[lo + Math.floor(Math.random() * (hi - lo + 1))];
   var instance = {}, k;
@@ -762,7 +971,7 @@ Game.prototype.showBanner = function() {
   setTimeout(function() { el.style.opacity = '0'; }, 1600);
 };
 Game.prototype.showDead = function() {
-  document.getElementById('glvl').textContent  = (this.lv + 1) + '/50';
+  document.getElementById('glvl').textContent  = (this.lv + 1);
   document.getElementById('ggems').textContent = this.gems;
   document.getElementById('gov').style.display = 'flex';
 };
@@ -773,11 +982,11 @@ Game.prototype.hud = function() {
   var hpColor = hpPct > 0.5 ? '#44dd44' : hpPct > 0.25 ? '#e8aa20' : '#ff3333';
   document.getElementById('hpfill').style.width      = (hpPct * 100) + '%';
   document.getElementById('hpfill').style.background = hpColor;
-  document.getElementById('ltxt').textContent = (this.lv + 1) + '/50';
+  document.getElementById('ltxt').textContent = (this.lv + 1);
   document.getElementById('ztxt').textContent = this.ld ? this.ld.zone.flag + ' ' + this.ld.zone.n : '-';
   document.getElementById('gtxt').textContent = this.gems + '💎';
   document.getElementById('stxt').textContent = this.score;
-  document.getElementById('etxt').textContent = this.mons.filter(function(m) { return !m.dead; }).length;
+  document.getElementById('etxt').textContent = this.mons.filter(function(m) { return !m.dead || m.reviving; }).length;
 
   var petCounts = {}, petOrder = [];
   this.pets.forEach(function(pt) {
@@ -797,8 +1006,10 @@ Game.prototype.hud = function() {
     return '<div class="pi"' + dim + ' title="' + entry.pt.n + (total > 1 ? ' x'+total : '') + (entry.dead > 0 ? ' ('+entry.dead+' dead)' : '') + '">' + entry.pt.e + badge + twrBadge + deadBadge + '</div>';
   }).join('');
 
-  document.getElementById('lvlmap').textContent = '[' + Array.from({length: 50}, function(_, i) {
-    return i < G.lv ? '■' : i === G.lv ? '◆' : '□';
+  var mapStart = Math.max(0, G.lv - 8);
+  document.getElementById('lvlmap').textContent = '[' + Array.from({length: 17}, function(_, i) {
+    var l = mapStart + i;
+    return l < G.lv ? '■' : l === G.lv ? '◆' : '□';
   }).join('') + ']';
 };
 
@@ -855,6 +1066,37 @@ Game.prototype.draw = function() {
       ctx.globalAlpha = 1;
     }
   }
+
+  // Draw volcano
+  if (this.volcano) {
+    var vol = this.volcano;
+    ctx.font = '36px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🌋', vol.x, vol.y);
+    var pulse2 = 0.3 + 0.3 * Math.sin(Date.now() / 300);
+    ctx.globalAlpha = pulse2;
+    ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(vol.x, vol.y, 24, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw lava blast warnings
+  var now_draw = Date.now();
+  this.lavaBlasts.forEach(function(b) {
+    if (b.done) return;
+    var frac = 1 - (b.warnUntil - now_draw) / 1600;
+    frac = Math.max(0, Math.min(1, frac));
+    var wrad = 10 + frac * 26;
+    ctx.globalAlpha = 0.25 + frac * 0.45;
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.7 + frac * 0.3;
+    ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,80,0,0.8)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(b.x - 14, b.y); ctx.lineTo(b.x + 14, b.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x, b.y + 14); ctx.stroke();
+  });
 
   this.towers.forEach(function(tw) {
     if (tw.dead) return;
@@ -1109,89 +1351,45 @@ function metaReturn(won) {
   document.getElementById('gov').style.display = 'none';
   document.getElementById('wov').style.display = 'none';
   if (!G) { if (window.showHub) window.showHub(); return; }
-  if (G.arenaMode) {
-    var bredPets = (G.pets || []).filter(function(p) {
-      return !G.arenaInitialPetUIDs || !G.arenaInitialPetUIDs[p.uid];
-    });
-    if (window.META_onArenaEnd) window.META_onArenaEnd(won, bredPets);
-    else if (window.showHub) window.showHub();
-  } else if (G.workMode) {
-    if (window.META_onWorkEnd) window.META_onWorkEnd(G.workEmployer || '');
-    else if (window.showHub) window.showHub();
-  } else if (window.META_onRunEnd) {
-    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], (G.lv || 0) + (won ? 1 : 0));
+  if (window.META_onRunEnd) {
+    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {});
   } else {
     restart();
   }
 }
 
-window.META_startGame = function (config) {
-  G = new Game();
-  if (!config) return;
-  if (config.speed)   G.upg.speed   += config.speed;
-  if (config.attack)  G.upg.attack  += config.attack  * 2;
-  if (config.petluck) G.upg.petluck += config.petluck * 2;
-  for (var i = 0; i < (config.potion || 0); i++) { G.p.mhp += 30; G.p.hp = Math.min(G.p.hp + 30, G.p.mhp); }
-};
-
-window.META_startWork = function (employerName, employerOnline) {
-  G = new Game();
-  G.workMode     = true;
-  G.workEmployer = employerName;
-  if (window.META_showChatIfOnline) window.META_showChatIfOnline(employerName, employerOnline);
-};
-
-window.META_startArena = function (myPets, oppPets, oppName) {
-  G = new Game();
-  G.arenaMode = true;
-  G.chest = null; G.chestPet = null; G.alreadyOwned = true;
-
-  // Add home pets to the player's party
+function applyHomePets(homePets) {
+  G.homePetUIDs = {};
   var now = Date.now();
-  (myPets || []).forEach(function (p, i) {
+  (homePets || []).forEach(function(p, i) {
     var inst = {}, k;
     for (k in p) inst[k] = p[k];
-    inst.uid = p.id + '_arena_' + now + '_' + i;
+    inst.uid = p.id + '_home_' + now + '_' + i;
     inst.mhp = petMaxHp(inst); inst.hp = inst.mhp; inst.dead = false;
     inst.wdx = 0; inst.wdy = 0; inst.wtim = 0; inst.healMode = false;
-    var ang = (i / Math.max(1, myPets.length)) * Math.PI * 2;
-    inst.x = G.p.x + Math.cos(ang) * 55; inst.y = G.p.y + Math.sin(ang) * 40;
+    var ang = (i / Math.max(1, homePets.length)) * Math.PI * 2;
+    inst.x = G.p.x + Math.cos(ang) * 55;
+    inst.y = G.p.y + Math.sin(ang) * 40;
     G.patk[inst.uid] = now;
     if (p.hi > 0) G.ptim[inst.uid] = now;
     G.pets.push(inst);
+    G.homePetUIDs[inst.uid] = true;
   });
+}
 
-  // Convert opponent pets into arena monsters
-  var arenaMons = [];
-  (oppPets || []).forEach(function (p) {
-    var hp  = Math.max(80,  (p.atk || 0) * 4 + (p.heal || 0) * 3 + Math.round((p.sc || 0) * 200) + 80);
-    var atk = Math.max(8,   (p.atk || 0) + Math.round((p.sc || 0) * 40));
-    var pos = G.rf();
-    arenaMons.push({
-      t: p.n, e: p.e, hp: hp, mhp: hp, atk: atk, spd: 80 + Math.floor(Math.random() * 40),
-      gem: 0, x: pos.x, y: pos.y, at: 0, pat: 0, mt: 0, dx: 0, dy: 0, dead: false
-    });
-  });
-
-  // Opponent player as boss
-  var bossHp = 300 + (oppPets || []).length * 60;
-  var bossPos = G.rf();
-  arenaMons.push({
-    t: oppName, e: '👤', hp: bossHp, mhp: bossHp, atk: 22, spd: 95,
-    gem: 0, x: bossPos.x, y: bossPos.y, at: 0, pat: 0, mt: 0, dx: 0, dy: 0, dead: false
-  });
-
-  G.mons = arenaMons;
-
-  // Record which pets were brought from home so bred pets can be identified later
-  G.arenaInitialPetUIDs = {};
-  G.pets.forEach(function(p) { G.arenaInitialPetUIDs[p.uid] = true; });
-
-  var el = document.getElementById('banner');
-  el.textContent = '⚔️ ARENA vs ' + oppName;
-  el.style.opacity = '1';
-  setTimeout(function () { el.style.opacity = '0'; }, 2000);
+window.META_startGame = function (config, homePets) {
+  G = new Game();
+  if (config) {
+    if (config.speed)        G.upg.speed   += config.speed;
+    if (config.attack)       G.upg.attack  += config.attack  * 2;
+    if (config.petluck)      G.upg.petluck += config.petluck * 2;
+    for (var i = 0; i < (config.potion || 0); i++) { G.p.mhp += 30; G.p.hp = Math.min(G.p.hp + 30, G.p.mhp); }
+    if (config.weaponDmg)   { G.weaponDmg = config.weaponDmg; G.weaponRange = config.weaponRange; G.weaponLevel = config.weaponLevel || 1; G.weaponColor = config.weaponColor || '#fff'; }
+  }
+  applyHomePets(homePets);
 };
+
+
 
 var last = 0;
 function loop(ts) {
