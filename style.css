@@ -460,3 +460,40 @@ canvas{display:block;position:absolute;top:0;left:0;}
 .dragon-info small{color:#9070c0;font-size:11px;}
 .dragon-btn{font-size:11px;padding:5px 10px;min-width:80px;}
 .dragon-btn:disabled{opacity:0.4;cursor:default;}
+
+/* ── Awards ───────────────────────────────────────────────── */
+.awards-progress{color:#c090e0;font-size:12px;text-align:center;margin-bottom:10px;letter-spacing:1px;}
+.awards-grid{width:100%;max-width:720px;margin:0 auto;}
+.award-cat-title{
+  color:#d090ff;font-size:11px;font-weight:bold;letter-spacing:1px;
+  margin:14px 0 6px;border-left:4px solid #7040c0;
+  padding-left:8px;background:rgba(50,15,90,0.5);border-radius:0 6px 6px 0;
+  padding:5px 8px;
+}
+.award-cat-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:6px;margin-bottom:6px;
+}
+.award-item{
+  background:rgba(30,10,60,0.8);border:1px solid #3a1a7a;border-radius:8px;
+  padding:8px;text-align:center;opacity:0.5;
+}
+.award-item.award-done{
+  opacity:1;border-color:#7040d0;
+  background:rgba(50,20,100,0.9);
+  box-shadow:0 0 8px rgba(120,60,220,0.4);
+}
+.award-emoji{font-size:20px;margin-bottom:3px;}
+.award-name{color:#e0d0ff;font-size:11px;font-weight:bold;margin-bottom:2px;}
+.award-desc{color:#8070a0;font-size:10px;margin-bottom:4px;line-height:1.3;}
+.award-ruby{color:#ffd700;font-size:11px;font-weight:bold;}
+.award-item.award-done .award-ruby{color:#44ff88;}
+
+/* ── Result awards ────────────────────────────────────────── */
+.result-awards{margin-top:10px;text-align:center;}
+.result-award{
+  display:inline-block;margin:3px;padding:4px 8px;
+  background:rgba(60,30,120,0.9);border:1px solid #7040c0;border-radius:6px;
+  color:#e0d0ff;font-size:12px;
+}
+.result-award .award-ruby{color:#44ff88;margin-left:4px;}

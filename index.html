@@ -46,6 +46,11 @@
         <span class="hab-label">Dragons</span>
         <span class="hab-desc">Hatch eggs, collect daily rubies<br><small>Egg every 5 levels · 20% chance</small></span>
       </button>
+      <button class="hub-action-btn" onclick="showAwards()">
+        <span class="hab-icon">🏅</span>
+        <span class="hab-label">Awards</span>
+        <span class="hab-desc">100 challenges, earn rubies<br><small>Track your progress</small></span>
+      </button>
     </div>
   </div>
 </div>
@@ -90,6 +95,17 @@
     <div class="meta-title">🛒 Shop</div>
     <div class="shop-rubies">Rubies: <span id="meta-shop-rubies">0 🔴</span></div>
     <div id="meta-shop-grid" class="meta-shop-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Awards ──────────────────────────────────────────── -->
+<div id="screen-awards" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🏅 Awards</div>
+    <div class="shop-rubies">Rubies: <span id="awards-rubies">0 🔴</span></div>
+    <div id="awards-progress" class="awards-progress"></div>
+    <div id="awards-grid" class="awards-grid"></div>
     <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
   </div>
 </div>

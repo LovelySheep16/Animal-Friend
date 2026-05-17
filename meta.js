@@ -115,6 +115,195 @@
     if (changed) saveAccount(acc);
   }
 
+  // ── Awards helpers ────────────────────────────────────────────────────────
+  function countSpecies(acc) {
+    var seen = {};
+    (acc.homePets||[]).forEach(function(p){ seen[p.id]=true; });
+    return Object.keys(seen).length;
+  }
+  function countHabitats(acc) {
+    var filled = 0;
+    for (var hi = 0; hi < HABITATS.length - 1; hi++) {
+      var h = HABITATS[hi];
+      if ((acc.homePets||[]).some(function(p){ return h.ids.indexOf(p.id)>=0; })) filled++;
+    }
+    return filled;
+  }
+  function countHabSpec(acc, hi) {
+    var h = HABITATS[hi]; if (!h) return 0;
+    var seen = {};
+    (acc.homePets||[]).forEach(function(p){ if (h.ids.indexOf(p.id)>=0) seen[p.id]=true; });
+    return Object.keys(seen).length;
+  }
+  function hasdragon(acc, habitat) {
+    return (acc.dragons||[]).some(function(d){ return d.habitat===habitat; });
+  }
+  function countServants(acc) {
+    return Object.keys(acc.servants||{}).length;
+  }
+  function maxWeaponLevel(acc) {
+    var max = 0;
+    Object.keys(acc.weapons||{}).forEach(function(id){ if ((acc.weapons[id]||0)>max) max=acc.weapons[id]; });
+    return max;
+  }
+  function hasMagicWeapon(acc) {
+    var weps = window.WEAPONS||[];
+    return Object.keys(acc.weapons||{}).some(function(id){
+      var w = weps.filter(function(x){return x.id===id;})[0];
+      return w && w.cat==='Magic';
+    });
+  }
+  function hasAllWeaponCats(acc) {
+    var cats = ['Close','Medium','Far','Very Far','Magic'];
+    var weps = window.WEAPONS||[];
+    var owned = Object.keys(acc.weapons||{});
+    return cats.every(function(cat){
+      return owned.some(function(id){
+        var w = weps.filter(function(x){return x.id===id;})[0];
+        return w && w.cat===cat;
+      });
+    });
+  }
+  function hasAllPetCats(acc) {
+    var cats = ['🌿 Healers','⚔️ Attackers','🛡️ Tanks','✨ Hybrids','🔥 Legendaries'];
+    return cats.every(function(cat){
+      return (acc.homePets||[]).some(function(p){ return p.cat===cat; });
+    });
+  }
+
+  var AWARDS = [
+    // FIRST STEPS
+    {id:'first_run',      e:'🎮', n:'First Steps',        d:'Play your first run',                 r:5,   check:function(a){return a.stats.runsPlayed>=1;}},
+    {id:'first_pet',      e:'🐾', n:'Pet Owner',          d:'Bring a pet home',                    r:5,   check:function(a){return (a.homePets||[]).length>=1;}},
+    {id:'first_egg',      e:'🥚', n:'Dragon Dreamer',     d:'Get a dragon egg',                    r:10,  check:function(a){return (a.dragonEggs||[]).length+(a.dragons||[]).length>=1;}},
+    {id:'first_dragon',   e:'🐲', n:'Dragon Keeper',      d:'Hatch your first dragon',             r:15,  check:function(a){return (a.dragons||[]).length>=1;}},
+    {id:'first_weapon',   e:'⚔️', n:'Armed',              d:'Buy a weapon',                        r:5,   check:function(a){return Object.keys(a.weapons||{}).length>=1;}},
+    {id:'first_servant',  e:'🏰', n:'First Hire',         d:'Hire a servant',                      r:5,   check:function(a){return Object.keys(a.servants||{}).length>=1;}},
+    {id:'first_boost',    e:'🛒', n:'Power Shopper',      d:'Buy a shop boost',                    r:5,   check:function(a){return a.stats.boostsUsed>=1;}},
+    {id:'first_ruby',     e:'🔴', n:'Ruby Earner',        d:'Earn your first ruby',                r:3,   check:function(a){return a.stats.rubiesEarned>=1;}},
+    {id:'first_win',      e:'🏆', n:'Champion!',          d:'Beat all 50 levels',                  r:50,  check:function(a){return a.stats.runsWon>=1;}},
+    {id:'level_5',        e:'⭐', n:'Adventurer',         d:'Reach level 5',                       r:5,   check:function(a){return a.highestLevel>=5;}},
+    // LEVELS
+    {id:'level_10',       e:'⭐', n:'Veteran',            d:'Reach level 10',                      r:10,  check:function(a){return a.highestLevel>=10;}},
+    {id:'level_15',       e:'⭐', n:'Explorer',           d:'Reach level 15',                      r:12,  check:function(a){return a.highestLevel>=15;}},
+    {id:'level_20',       e:'⭐', n:'Warrior',            d:'Reach level 20',                      r:15,  check:function(a){return a.highestLevel>=20;}},
+    {id:'level_25',       e:'⭐', n:'Elite',              d:'Reach level 25',                      r:18,  check:function(a){return a.highestLevel>=25;}},
+    {id:'level_30',       e:'⭐', n:'Expert',             d:'Reach level 30',                      r:22,  check:function(a){return a.highestLevel>=30;}},
+    {id:'level_35',       e:'⭐', n:'Master',             d:'Reach level 35',                      r:26,  check:function(a){return a.highestLevel>=35;}},
+    {id:'level_40',       e:'⭐', n:'Grandmaster',        d:'Reach level 40',                      r:30,  check:function(a){return a.highestLevel>=40;}},
+    {id:'level_45',       e:'⭐', n:'Legend',             d:'Reach level 45',                      r:35,  check:function(a){return a.highestLevel>=45;}},
+    {id:'level_50',       e:'🌟', n:'True Champion',      d:'Complete all 50 levels',              r:50,  check:function(a){return a.highestLevel>=50;}},
+    // SCORE
+    {id:'score_1k',       e:'📊', n:'Score Seeker',       d:'Reach 1,000 score in a run',          r:5,   check:function(a){return a.stats.bestScore>=1000;}},
+    {id:'score_5k',       e:'📊', n:'High Scorer',        d:'Reach 5,000 score in a run',          r:10,  check:function(a){return a.stats.bestScore>=5000;}},
+    {id:'score_10k',      e:'📊', n:'Score Hunter',       d:'Reach 10,000 score in a run',         r:15,  check:function(a){return a.stats.bestScore>=10000;}},
+    {id:'score_25k',      e:'📊', n:'Score Master',       d:'Reach 25,000 score in a run',         r:20,  check:function(a){return a.stats.bestScore>=25000;}},
+    {id:'score_50k',      e:'📊', n:'Score Legend',       d:'Reach 50,000 score in a run',         r:30,  check:function(a){return a.stats.bestScore>=50000;}},
+    {id:'score_100k',     e:'📊', n:'Score God',          d:'Reach 100,000 score in a run',        r:50,  check:function(a){return a.stats.bestScore>=100000;}},
+    {id:'score_250k',     e:'📊', n:'Untouchable',        d:'Reach 250,000 score in a run',        r:75,  check:function(a){return a.stats.bestScore>=250000;}},
+    {id:'score_500k',     e:'📊', n:'Score Emperor',      d:'Reach 500,000 score in a run',        r:100, check:function(a){return a.stats.bestScore>=500000;}},
+    {id:'total_score_500k',e:'📊',n:'Score Veteran',      d:'Total 500,000 score ever',            r:30,  check:function(a){return a.stats.totalScore>=500000;}},
+    {id:'total_score_1m', e:'📊', n:'Scorer of Scores',   d:'Total 1,000,000 score ever',          r:50,  check:function(a){return a.stats.totalScore>=1000000;}},
+    // HOME PETS
+    {id:'home_5',         e:'🏠', n:'Cozy Home',          d:'5 pets at home',                      r:8,   check:function(a){return (a.homePets||[]).length>=5;}},
+    {id:'home_10',        e:'🏠', n:'Pet Lover',          d:'10 pets at home',                     r:12,  check:function(a){return (a.homePets||[]).length>=10;}},
+    {id:'home_25',        e:'🏠', n:'Animal Shelter',     d:'25 pets at home',                     r:18,  check:function(a){return (a.homePets||[]).length>=25;}},
+    {id:'home_50',        e:'🏠', n:'Zoo Keeper',         d:'50 pets at home',                     r:25,  check:function(a){return (a.homePets||[]).length>=50;}},
+    {id:'home_100',       e:'🏠', n:'Wildlife Sanctuary', d:'100 pets at home',                    r:35,  check:function(a){return (a.homePets||[]).length>=100;}},
+    {id:'home_200',       e:'🏠', n:"Noah's Ark",         d:'200 pets at home',                    r:50,  check:function(a){return (a.homePets||[]).length>=200;}},
+    {id:'species_5',      e:'🌿', n:'Naturalist',         d:'5 species at home',                   r:10,  check:function(a){return countSpecies(a)>=5;}},
+    {id:'species_10',     e:'🌿', n:'Biologist',          d:'10 species at home',                  r:20,  check:function(a){return countSpecies(a)>=10;}},
+    {id:'species_20',     e:'🌿', n:'Zoologist',          d:'20 species at home',                  r:35,  check:function(a){return countSpecies(a)>=20;}},
+    {id:'species_30',     e:'🌿', n:'Encyclopedist',      d:'30 species at home',                  r:50,  check:function(a){return countSpecies(a)>=30;}},
+    // HABITATS
+    {id:'all_habitats',   e:'🌍', n:'World Traveler',     d:'Pets in all 5 habitats',              r:20,  check:function(a){return countHabitats(a)>=5;}},
+    {id:'hab_aquarium',   e:'🌊', n:'Aquarium Master',    d:'6+ aquarium species at home',         r:20,  check:function(a){return countHabSpec(a,0)>=6;}},
+    {id:'hab_forest',     e:'🌿', n:'Forest Keeper',      d:'6+ forest species at home',           r:20,  check:function(a){return countHabSpec(a,1)>=6;}},
+    {id:'hab_savanna',    e:'🦁', n:'Safari Expert',      d:'6+ savanna species at home',          r:20,  check:function(a){return countHabSpec(a,2)>=6;}},
+    {id:'hab_sky',        e:'☁️', n:'Cloud Walker',       d:'5+ sky species at home',              r:20,  check:function(a){return countHabSpec(a,3)>=5;}},
+    {id:'hab_mythical',   e:'✨', n:'Myth Keeper',        d:'All 5 mythical species at home',      r:30,  check:function(a){return countHabSpec(a,4)>=5;}},
+    // DRAGONS
+    {id:'dragon_3',       e:'🐲', n:'Dragon Breeder',     d:'Own 3 dragons',                       r:20,  check:function(a){return (a.dragons||[]).length>=3;}},
+    {id:'dragon_6',       e:'🐲', n:'Dragon Master',      d:'Own 6 dragons',                       r:50,  check:function(a){return (a.dragons||[]).length>=6;}},
+    {id:'dragon_sea',     e:'💧', n:'Sea Dragon Owner',   d:'Own a Sea Dragon',                    r:10,  check:function(a){return hasdragon(a,'aquarium');}},
+    {id:'dragon_storm',   e:'⚡', n:'Storm Dragon Owner', d:'Own a Storm Dragon',                  r:20,  check:function(a){return hasdragon(a,'sky');}},
+    {id:'dragon_crystal', e:'💎', n:'Crystal Dragon',     d:'Own a Crystal Dragon',                r:30,  check:function(a){return hasdragon(a,'mythical');}},
+    {id:'dragon_inc100',  e:'💰', n:'Dragon Investor',    d:'Collect 100 rubies from dragons',     r:20,  check:function(a){return a.stats.dragonRubies>=100;}},
+    {id:'dragon_inc500',  e:'💰', n:'Dragon Empire',      d:'Collect 500 rubies from dragons',     r:50,  check:function(a){return a.stats.dragonRubies>=500;}},
+    // SERVANTS
+    {id:'servant_5',      e:'🏰', n:'Growing Staff',      d:'Own 5 different servants',            r:10,  check:function(a){return countServants(a)>=5;}},
+    {id:'servant_10',     e:'🏰', n:'Large Staff',        d:'Own 10 different servants',           r:20,  check:function(a){return countServants(a)>=10;}},
+    {id:'servant_inc100', e:'💰', n:'Servant Investor',   d:'Collect 100 rubies from servants',    r:15,  check:function(a){return a.stats.servantRubies>=100;}},
+    {id:'servant_inc500', e:'💰', n:'Servant Empire',     d:'Collect 500 rubies from servants',    r:30,  check:function(a){return a.stats.servantRubies>=500;}},
+    {id:'servant_1000',   e:'💰', n:'Servant Kingdom',    d:'Collect 1,000 rubies from servants',  r:50,  check:function(a){return a.stats.servantRubies>=1000;}},
+    {id:'servant_knight', e:'⚔️', n:'Eternal Guard',      d:'Own an Eternal Knight',               r:25,  check:function(a){return !!(a.servants&&a.servants.eternalknight);}},
+    {id:'servant_cosmic', e:'🌌', n:'Cosmic Power',       d:'Own a Cosmic Being',                  r:40,  check:function(a){return !!(a.servants&&a.servants.cosmicbeing);}},
+    // WEAPONS
+    {id:'weapon_3',       e:'⚔️', n:'Armory',             d:'Own 3 weapons',                       r:10,  check:function(a){return Object.keys(a.weapons||{}).length>=3;}},
+    {id:'weapon_5',       e:'⚔️', n:'Arsenal',            d:'Own 5 weapons',                       r:15,  check:function(a){return Object.keys(a.weapons||{}).length>=5;}},
+    {id:'weapon_10',      e:'⚔️', n:'War Chest',          d:'Own 10 weapons',                      r:25,  check:function(a){return Object.keys(a.weapons||{}).length>=10;}},
+    {id:'weapon_lvl5',    e:'⬆️', n:'Sharpened',          d:'Upgrade a weapon to level 5',         r:20,  check:function(a){return maxWeaponLevel(a)>=5;}},
+    {id:'weapon_lvl10',   e:'⬆️', n:'Masterwork',         d:'Upgrade a weapon to level 10',        r:40,  check:function(a){return maxWeaponLevel(a)>=10;}},
+    {id:'weapon_magic',   e:'🪄', n:'Magic User',         d:'Own a magic weapon',                  r:10,  check:function(a){return hasMagicWeapon(a);}},
+    {id:'weapon_cats',    e:'🎯', n:'Jack of All Arms',   d:'One weapon from each category',       r:30,  check:function(a){return hasAllWeaponCats(a);}},
+    // ECONOMY
+    {id:'rubies_100',     e:'🔴', n:'Ruby Stash',         d:'Earn 100 rubies total',               r:10,  check:function(a){return a.stats.rubiesEarned>=100;}},
+    {id:'rubies_500',     e:'🔴', n:'Ruby Hoard',         d:'Earn 500 rubies total',               r:20,  check:function(a){return a.stats.rubiesEarned>=500;}},
+    {id:'rubies_1000',    e:'🔴', n:'Ruby Treasury',      d:'Earn 1,000 rubies total',             r:35,  check:function(a){return a.stats.rubiesEarned>=1000;}},
+    {id:'rubies_5000',    e:'🔴', n:'Ruby Empire',        d:'Earn 5,000 rubies total',             r:75,  check:function(a){return a.stats.rubiesEarned>=5000;}},
+    {id:'spent_500',      e:'💸', n:'Big Spender',        d:'Spend 500 rubies total',              r:20,  check:function(a){return a.stats.rubiesSpent>=500;}},
+    {id:'spent_1000',     e:'💸', n:'High Roller',        d:'Spend 1,000 rubies total',            r:35,  check:function(a){return a.stats.rubiesSpent>=1000;}},
+    {id:'boosts_20',      e:'⚡', n:'Boost Addict',       d:'Use 20 shop boosts',                  r:15,  check:function(a){return a.stats.boostsUsed>=20;}},
+    // COMBAT
+    {id:'wall_1',         e:'🧱', n:'Wall Breaker',       d:'Break your first wall',               r:5,   check:function(a){return a.stats.wallsBroken>=1;}},
+    {id:'walls_50',       e:'🧱', n:'Demolisher',         d:'Break 50 walls total',                r:15,  check:function(a){return a.stats.wallsBroken>=50;}},
+    {id:'walls_200',      e:'🧱', n:'Wrecking Ball',      d:'Break 200 walls total',               r:30,  check:function(a){return a.stats.wallsBroken>=200;}},
+    {id:'walls_500',      e:'🧱', n:'Earth Shaker',       d:'Break 500 walls total',               r:50,  check:function(a){return a.stats.wallsBroken>=500;}},
+    {id:'monsters_500',   e:'💀', n:'Monster Slayer',     d:'Kill 500 monsters total',             r:10,  check:function(a){return a.stats.monstersKilled>=500;}},
+    {id:'monsters_2000',  e:'💀', n:'Monster Hunter',     d:'Kill 2,000 monsters total',           r:25,  check:function(a){return a.stats.monstersKilled>=2000;}},
+    {id:'monsters_5000',  e:'💀', n:'Monster Destroyer',  d:'Kill 5,000 monsters total',           r:50,  check:function(a){return a.stats.monstersKilled>=5000;}},
+    {id:'volcano_10',     e:'🌋', n:'Volcano Miner',      d:'Get 10 gems from the volcano',        r:10,  check:function(a){return a.stats.volcanoGems>=10;}},
+    {id:'volcano_50',     e:'🌋', n:'Volcano Tamer',      d:'Get 50 gems from the volcano',        r:20,  check:function(a){return a.stats.volcanoGems>=50;}},
+    {id:'volcano_100',    e:'🌋', n:'Volcano Master',     d:'Get 100 gems from the volcano',       r:35,  check:function(a){return a.stats.volcanoGems>=100;}},
+    {id:'gems_50_run',    e:'💎', n:'Gem Digger',         d:'Collect 50 gems in one run',          r:10,  check:function(a){return a.stats.bestGems>=50;}},
+    {id:'gems_100_run',   e:'💎', n:'Gem Lord',           d:'Collect 100 gems in one run',         r:20,  check:function(a){return a.stats.bestGems>=100;}},
+    // RUNS
+    {id:'runs_5',         e:'▶️', n:'Regular',            d:'Play 5 runs',                         r:8,   check:function(a){return a.stats.runsPlayed>=5;}},
+    {id:'runs_10',        e:'▶️', n:'Dedicated',          d:'Play 10 runs',                        r:15,  check:function(a){return a.stats.runsPlayed>=10;}},
+    {id:'runs_25',        e:'▶️', n:'Committed',          d:'Play 25 runs',                        r:25,  check:function(a){return a.stats.runsPlayed>=25;}},
+    {id:'runs_50',        e:'▶️', n:'Hardcore',           d:'Play 50 runs',                        r:40,  check:function(a){return a.stats.runsPlayed>=50;}},
+    {id:'wins_3',         e:'🏆', n:'Triple Champion',    d:'Win 3 complete runs',                 r:60,  check:function(a){return a.stats.runsWon>=3;}},
+    {id:'wins_5',         e:'🏆', n:'Legend Champion',    d:'Win 5 complete runs',                 r:80,  check:function(a){return a.stats.runsWon>=5;}},
+    {id:'wins_10',        e:'🏆', n:'Supreme Champion',   d:'Win 10 complete runs',                r:100, check:function(a){return a.stats.runsWon>=10;}},
+    {id:'total_gems_500', e:'💎', n:'Gem Collector',      d:'Collect 500 gems total',              r:20,  check:function(a){return a.stats.totalGems>=500;}},
+    {id:'total_gems_2000',e:'💎', n:'Gem Hoarder',        d:'Collect 2,000 gems total',            r:50,  check:function(a){return a.stats.totalGems>=2000;}},
+    // SPECIAL
+    {id:'all_cats_home',  e:'🎪', n:'Pet Diversity',      d:'All 5 pet types at home',             r:25,  check:function(a){return hasAllPetCats(a);}},
+    {id:'rich_run',       e:'💎', n:'Rich Run',           d:'Earn 50+ rubies in one run',          r:20,  check:function(a){return a.stats.bestRunRubies>=50;}},
+    {id:'mega_run',       e:'💎', n:'Mega Run',           d:'Earn 100+ rubies in one run',         r:50,  check:function(a){return a.stats.bestRunRubies>=100;}},
+    {id:'hoarder',        e:'💰', n:'Ruby Baron',         d:'Have 500 rubies at once',             r:25,  check:function(a){return a.stats.maxRubies>=500;}},
+    {id:'home_500_total', e:'🏠', n:'Megafarm',           d:'500 total pets brought home',         r:40,  check:function(a){return a.stats.totalPetsHome>=500;}},
+    {id:'grandmaster',    e:'👑', n:'Grandmaster',        d:'Earn all 99 other awards',            r:200, check:function(a){return (a.unlockedAwards||[]).length>=99;}},
+  ];
+
+  function checkAwards(acc) {
+    if (!acc.unlockedAwards) acc.unlockedAwards = [];
+    var newOnes = [];
+    var unlocked = acc.unlockedAwards;
+    AWARDS.forEach(function(aw) {
+      if (unlocked.indexOf(aw.id) >= 0) return;
+      try {
+        if (aw.check(acc)) {
+          unlocked.push(aw.id);
+          acc.rubies += aw.r;
+          if (acc.stats) acc.stats.rubiesEarned = (acc.stats.rubiesEarned||0) + aw.r;
+          newOnes.push(aw);
+        }
+      } catch(e) {}
+    });
+    return newOnes;
+  }
+
   function ensureItems(acc) {
     if (!acc.shopItems)    acc.shopItems    = { speed:0, attack:0, petluck:0, potion:0 };
     if (!acc.homePets)     acc.homePets     = [];
@@ -126,6 +315,13 @@
     if (!acc.lastServantCollect)acc.lastServantCollect = Date.now();
     if (!acc.dragonEggs)        acc.dragonEggs        = [];
     if (!acc.dragons)           acc.dragons           = [];
+    if (!acc.unlockedAwards)    acc.unlockedAwards    = [];
+    if (!acc.stats) acc.stats = {
+      runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
+      totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
+      wallsBroken:0, volcanoGems:0, servantRubies:0, dragonRubies:0,
+      rubiesEarned:0, rubiesSpent:0, boostsUsed:0, maxRubies:0
+    };
     return acc;
   }
 
@@ -162,7 +358,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -176,6 +372,49 @@ function speciesCount(acc, petId) {
     }
   }
 
+
+  // ── Awards ────────────────────────────────────────────────────────────────
+  window.showAwards = function() {
+    var acc = ensureItems(getAccount());
+    checkAwards(acc);
+    saveAccount(acc);
+    document.getElementById('awards-rubies').textContent = acc.rubies + ' 🔴';
+    var unlocked = acc.unlockedAwards || [];
+    document.getElementById('awards-progress').textContent = unlocked.length + ' / ' + AWARDS.length + ' awards';
+    var cats = [
+      {label:'🎮 First Steps',  ids:['first_run','first_pet','first_egg','first_dragon','first_weapon','first_servant','first_boost','first_ruby','first_win','level_5']},
+      {label:'⭐ Levels',       ids:['level_10','level_15','level_20','level_25','level_30','level_35','level_40','level_45','level_50']},
+      {label:'📊 Score',        ids:['score_1k','score_5k','score_10k','score_25k','score_50k','score_100k','score_250k','score_500k','total_score_500k','total_score_1m']},
+      {label:'🏠 Home Pets',    ids:['home_5','home_10','home_25','home_50','home_100','home_200','species_5','species_10','species_20','species_30']},
+      {label:'🌍 Habitats',     ids:['all_habitats','hab_aquarium','hab_forest','hab_savanna','hab_sky','hab_mythical']},
+      {label:'🐲 Dragons',      ids:['dragon_3','dragon_6','dragon_sea','dragon_storm','dragon_crystal','dragon_inc100','dragon_inc500']},
+      {label:'🏰 Servants',     ids:['servant_5','servant_10','servant_inc100','servant_inc500','servant_1000','servant_knight','servant_cosmic']},
+      {label:'⚔️ Weapons',      ids:['weapon_3','weapon_5','weapon_10','weapon_lvl5','weapon_lvl10','weapon_magic','weapon_cats']},
+      {label:'🔴 Economy',      ids:['rubies_100','rubies_500','rubies_1000','rubies_5000','spent_500','spent_1000','boosts_20']},
+      {label:'💀 Combat',       ids:['wall_1','walls_50','walls_200','walls_500','monsters_500','monsters_2000','monsters_5000','volcano_10','volcano_50','volcano_100','gems_50_run','gems_100_run']},
+      {label:'▶️ Runs',         ids:['runs_5','runs_10','runs_25','runs_50','wins_3','wins_5','wins_10','total_gems_500','total_gems_2000']},
+      {label:'✨ Special',      ids:['all_cats_home','rich_run','mega_run','hoarder','home_500_total','grandmaster']},
+    ];
+    var awMap = {};
+    AWARDS.forEach(function(aw){ awMap[aw.id]=aw; });
+    var html = '';
+    cats.forEach(function(cat) {
+      html += '<div class="award-cat-title">' + cat.label + '</div><div class="award-cat-grid">';
+      cat.ids.forEach(function(id) {
+        var aw = awMap[id]; if (!aw) return;
+        var done = unlocked.indexOf(id) >= 0;
+        html += '<div class="award-item' + (done ? ' award-done' : '') + '">' +
+          '<div class="award-emoji">' + aw.e + '</div>' +
+          '<div class="award-name">' + aw.n + '</div>' +
+          '<div class="award-desc">' + aw.d + '</div>' +
+          '<div class="award-ruby">' + (done ? '✓ +' : '') + aw.r + ' 🔴</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById('awards-grid').innerHTML = html;
+    showScreen('screen-awards');
+  };
 
   // ── Hub ───────────────────────────────────────────────────────────────────
   function showHub() {
@@ -237,6 +476,10 @@ function speciesCount(acc, petId) {
     var rubies = Math.floor(elapsed / 86400000) * dt.rubyPerDay;
     if (rubies <= 0) return;
     acc.rubies += rubies; d.lastCollect = Date.now();
+    acc.stats.dragonRubies += rubies;
+    acc.stats.rubiesEarned += rubies;
+    if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    checkAwards(acc);
     saveAccount(acc); showDragons();
   };
 
@@ -248,6 +491,12 @@ function speciesCount(acc, petId) {
       var rubies = Math.floor(elapsed / 86400000) * dt.rubyPerDay;
       if (rubies > 0) { acc.rubies += rubies; d.lastCollect = Date.now(); total += rubies; }
     });
+    if (total > 0) {
+      acc.stats.dragonRubies += total;
+      acc.stats.rubiesEarned += total;
+      if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+      checkAwards(acc);
+    }
     saveAccount(acc); showDragons();
   };
 
@@ -304,6 +553,8 @@ function speciesCount(acc, petId) {
   window.playLevels = function () {
     var acc = ensureItems(getAccount());
     var wc  = getWeaponConfig(acc);
+    var boostsCount = (acc.shopItems.speed||0)+(acc.shopItems.attack||0)+(acc.shopItems.petluck||0)+(acc.shopItems.potion||0);
+    acc.stats.boostsUsed += boostsCount;
     var config = Object.assign({ speed: acc.shopItems.speed||0, attack: acc.shopItems.attack||0,
                    petluck: acc.shopItems.petluck||0, potion: acc.shopItems.potion||0 }, wc);
     acc.shopItems = { speed:0, attack:0, petluck:0, potion:0 };
@@ -312,7 +563,7 @@ function speciesCount(acc, petId) {
     if (window.META_startGame) window.META_startGame(config, pickBattlePets(acc.homePets));
   };
 
-  window.META_onRunEnd = function (won, pets, level, homePetUIDs, score, gems) {
+  window.META_onRunEnd = function (won, pets, level, homePetUIDs, score, gems, runStats) {
     var acc = ensureItems(getAccount());
     if (level > acc.highestLevel) acc.highestLevel = level;
     // Performance bonus: 1 ruby per 500 score points
@@ -321,6 +572,21 @@ function speciesCount(acc, petId) {
     var gemRubies = Math.floor((gems || 0) / 20);
     var totalRubies = perfBonus + gemRubies;
     acc.rubies += totalRubies;
+    // Stats tracking
+    acc.stats.runsPlayed++;
+    if (won) acc.stats.runsWon++;
+    if ((score||0) > acc.stats.bestScore) acc.stats.bestScore = score||0;
+    if ((gems||0) > acc.stats.bestGems) acc.stats.bestGems = gems||0;
+    if (totalRubies > acc.stats.bestRunRubies) acc.stats.bestRunRubies = totalRubies;
+    acc.stats.totalScore += score||0;
+    acc.stats.totalGems += gems||0;
+    acc.stats.rubiesEarned += totalRubies;
+    if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    if (runStats) {
+      acc.stats.monstersKilled += runStats.monstersKilled||0;
+      acc.stats.wallsBroken += runStats.wallsBroken||0;
+      acc.stats.volcanoGems += runStats.volcanoGems||0;
+    }
     // Dragon egg: 1 roll per 5-level milestone passed, 20% each
     var eggRolls = Math.floor(level / 5), eggsGot = 0;
     for (var ri = 0; ri < eggRolls; ri++) {
@@ -341,6 +607,9 @@ function speciesCount(acc, petId) {
         petsGoingHome.push(hp); acc.homePets.push(hp);
       }
     });
+    acc.stats.totalPetsHome += petsGoingHome.length;
+    if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    var newAwards = checkAwards(acc);
     saveAccount(acc);
     var titleEl = document.getElementById('result-title');
     titleEl.textContent = '💀 You Died';
@@ -348,7 +617,8 @@ function speciesCount(acc, petId) {
     document.getElementById('result-level').textContent  = 'Level reached: ' + level;
     document.getElementById('result-rubies').textContent =
       '+' + totalRubies + ' 🔴  (score bonus: ' + perfBonus + '  ·  gems→rubies: ' + gemRubies + ')' +
-      (eggsGot ? '  ·  🥚 ×' + eggsGot + ' dragon egg' + (eggsGot > 1 ? 's' : '') + '!' : '');
+      (eggsGot ? '  ·  🥚 ×' + eggsGot + ' dragon egg' + (eggsGot > 1 ? 's' : '') + '!' : '') +
+      (newAwards.length ? '  ·  🏅 ' + newAwards.length + ' award' + (newAwards.length>1?'s':'') + '!' : '');
     var petsEl = document.getElementById('result-pets');
     var homePetCount = Object.keys(homePetUIDs || {}).length;
     if (petsGoingHome.length > 0) {
@@ -359,6 +629,12 @@ function speciesCount(acc, petId) {
       petsEl.innerHTML = '<div class="result-note">' +
         (homePetCount ? homePetCount + ' home pet(s) returned safely. ' : '') +
         'No new pets this run.</div>';
+    }
+    if (newAwards.length) {
+      petsEl.innerHTML += '<div class="result-awards"><div class="result-pets-title">🏅 Awards Unlocked:</div>' +
+        newAwards.map(function(aw) {
+          return '<span class="result-award">' + aw.e + ' ' + aw.n + ' <span class="award-ruby">+' + aw.r + '🔴</span></span>';
+        }).join('') + '</div>';
     }
     showScreen('screen-result');
   };
@@ -394,6 +670,7 @@ function speciesCount(acc, petId) {
     var item = META_ITEMS.find(function(i) { return i.id === id; });
     if (!item || acc.rubies < item.cost) return;
     acc.rubies -= item.cost;
+    acc.stats.rubiesSpent += item.cost;
     acc.shopItems[id] = (acc.shopItems[id] || 0) + 1;
     saveAccount(acc); renderMetaShop();
   };
@@ -455,7 +732,9 @@ function speciesCount(acc, petId) {
     var sv  = SERVANTS.find(function(x) { return x.id === id; });
     if (!sv || acc.rubies < sv.cost) return;
     acc.rubies -= sv.cost;
+    acc.stats.rubiesSpent += sv.cost;
     acc.servants[id] = (acc.servants[id] || 0) + 1;
+    checkAwards(acc);
     saveAccount(acc);
     renderServants(acc);
   };
@@ -465,6 +744,9 @@ function speciesCount(acc, petId) {
     var income  = calcServantIncome(acc);
     if (income.rubies === 0 && income.pets === 0) return;
     acc.rubies += income.rubies;
+    acc.stats.servantRubies += income.rubies;
+    acc.stats.rubiesEarned += income.rubies;
+    if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
     var petPool = (window.PETS || []).slice(0, 15);
     for (var i = 0; i < income.pets; i++) {
       var p = petPool[Math.floor(Math.random() * petPool.length)];
@@ -473,6 +755,7 @@ function speciesCount(acc, petId) {
       }
     }
     acc.lastServantCollect = Date.now();
+    checkAwards(acc);
     saveAccount(acc);
     renderServants(acc);
   };
@@ -534,8 +817,10 @@ function speciesCount(acc, petId) {
     for (var i = 0; i < weapons.length; i++) { if (weapons[i].id === id) { w = weapons[i]; break; } }
     if (!w || acc.rubies < w.cost) return;
     acc.rubies -= w.cost;
+    acc.stats.rubiesSpent += w.cost;
     acc.weapons[id] = (acc.weapons[id] || 0) + 1;
     if (!acc.activeWeapon) acc.activeWeapon = id;
+    checkAwards(acc);
     saveAccount(acc);
     renderWeapons(acc);
   };

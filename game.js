@@ -386,6 +386,7 @@ function Game() {
   this.chest = null; this.chestPet = null; this.alreadyOwned = false;
   this.boxes = []; this.gemChests = []; this.petTrail = [];
   this.volcano = null; this.lavaBlasts = []; this.volcanoCooldown = 0;
+  this.monstersKilled = 0; this.wallsBroken = 0; this.volcanoGems = 0;
   this.build(); this.showBanner();
 }
 
@@ -680,7 +681,7 @@ Game.prototype.updatePets = function(dt, now) {
           self.patk[uid] = now;
           var fc = pt.id==='dragon'?'#ff7700':pt.id==='god'?'#ffff00':pt.id==='cerberus'?'#ff4400':'#70b0ff';
           if (vol2 && vol2D < 260) {
-            self.gems += 1; self.score += 10;
+            self.gems += 1; self.score += 10; self.volcanoGems++;
             self.fx.push({x1:pt.x, y1:pt.y, x2:vol2.x, y2:vol2.y, l:200, c:'#ff6600'});
             self.fl(vol2.x, vol2.y-10, '+1💎', '#ffd700');
           } else if (alive.length) {
@@ -1000,7 +1001,7 @@ Game.prototype.doAtk = function() {
         if (this.wallHp[wk] === undefined) this.wallHp[wk] = 1000;
         this.wallHp[wk] -= dmg;
         if (this.wallHp[wk] <= 0) {
-          this.map[wr][wc] = 0;
+          this.map[wr][wc] = 0; this.wallsBroken++;
           delete this.wallHp[wk];
           this.burst(wx, wy, '#886644', 5);
           p.hp = Math.max(1, p.hp - 20);
@@ -1025,7 +1026,7 @@ Game.prototype.kill  = function(m) {
       return;
     }
   }
-  m.dead = true;
+  m.dead = true; this.monstersKilled++;
   this.gems += m.gem; this.score += m.gem*10;
   this.burst(m.x, m.y, '#ffd700', 10); this.fl(m.x, m.y, '+' + m.gem + '💎', '#ffd700'); sndKill();
   var _p = this.p;
@@ -1518,7 +1519,7 @@ function metaReturn(won) {
   document.getElementById('wov').style.display = 'none';
   if (!G) { if (window.showHub) window.showHub(); return; }
   if (window.META_onRunEnd) {
-    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0);
+    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0, { monstersKilled: G.monstersKilled||0, wallsBroken: G.wallsBroken||0, volcanoGems: G.volcanoGems||0 });
   } else {
     restart();
   }
