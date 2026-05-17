@@ -431,8 +431,7 @@ Game.prototype.build = function() {
   // Spawn volcano
   var vpos = this.rf();
   this.volcano = { x: vpos.x, y: vpos.y };
-  this.lavaBlasts = [];
-  this.volcanoCooldown = 4000;
+  this.lavaBlasts = []; this.volcanoCooldown = 4000;
 
   // Spawn boxes (avoid player start area)
   this.boxes = [];
@@ -668,7 +667,7 @@ Game.prototype.updatePets = function(dt, now) {
     }
 
 
-    // Attack trigger — volcano soaks attacks (no damage, visual only)
+    // Attack trigger — volcano gives 1 gem when hit by a pet (unlimited HP)
     if (pt.atk > 0 && pt.ar > 0) {
       var vol2 = self.volcano;
       var chstA = (self.chest && !self.chest.open) ? self.chest : null;
@@ -681,8 +680,9 @@ Game.prototype.updatePets = function(dt, now) {
           self.patk[uid] = now;
           var fc = pt.id==='dragon'?'#ff7700':pt.id==='god'?'#ffff00':pt.id==='cerberus'?'#ff4400':'#70b0ff';
           if (vol2 && vol2D < 260) {
+            self.gems += 1; self.score += 10;
             self.fx.push({x1:pt.x, y1:pt.y, x2:vol2.x, y2:vol2.y, l:200, c:'#ff6600'});
-            self.fl(vol2.x, vol2.y - 10, '🔥', '#ff6600');
+            self.fl(vol2.x, vol2.y-10, '+1💎', '#ffd700');
           } else if (alive.length) {
             var tg = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
             var tgD = Math.hypot(tg.x-pt.x, tg.y-pt.y);
@@ -743,6 +743,7 @@ Game.prototype.updateTowers = function(dt, now) {
 };
 
 
+
 Game.prototype.updateVolcano = function(dt, now) {
   if (!this.volcano || this.dead || this.trans) return;
   var self = this, p = this.p, vol = this.volcano;
@@ -754,37 +755,37 @@ Game.prototype.updateVolcano = function(dt, now) {
     var playerChance = Math.max(0.05, 1 - distToVol / 320);
     var tx, ty;
     if (Math.random() < playerChance) {
-      tx = p.x + (Math.random() - 0.5) * 60; ty = p.y + (Math.random() - 0.5) * 60;
+      tx = p.x + (Math.random()-0.5)*60; ty = p.y + (Math.random()-0.5)*60;
     } else { var tgt = this.rf(); tx = tgt.x; ty = tgt.y; }
-    this.lavaBlasts.push({ x: tx, y: ty, warnUntil: now + WARN_MS, done: false });
+    this.lavaBlasts.push({ x:tx, y:ty, warnUntil:now+WARN_MS, done:false });
   }
   this.lavaBlasts = this.lavaBlasts.filter(function(b) {
     if (b.done) return false;
     if (now < b.warnUntil) return true;
     b.done = true;
-    if (Math.hypot(p.x - b.x, p.y - b.y) < LAVA_RADIUS) {
-      p.hp -= 200; self.burst(b.x, b.y, '#ff4400', 18); self.fl(b.x, b.y, '-200🔥', '#ff4400');
+    var dmg = Math.round(p.mhp * 0.30);
+    if (Math.hypot(p.x-b.x, p.y-b.y) < LAVA_RADIUS) {
+      p.hp = Math.max(0, p.hp - dmg);
+      self.burst(b.x, b.y, '#ff4400', 18); self.fl(b.x, b.y, '-'+dmg+'🔥', '#ff4400');
       if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); }
     } else { self.burst(b.x, b.y, '#ff6600', 14); }
     self.pets.forEach(function(pt) {
       if (pt.dead || pt.x === undefined) return;
-      if (Math.hypot(pt.x - b.x, pt.y - b.y) < LAVA_RADIUS) {
-        pt.hp -= 200; self.fl(pt.x, pt.y, '-200🔥', '#ff4400');
+      if (Math.hypot(pt.x-b.x, pt.y-b.y) < LAVA_RADIUS) {
+        var pdmg = pt.mhp ? Math.round(pt.mhp * 0.30) : dmg;
+        pt.hp = Math.max(0, pt.hp - pdmg);
+        self.fl(pt.x, pt.y, '-'+pdmg+'🔥', '#ff4400');
         if (pt.hp <= 0) self.killPet(pt);
       }
     });
     self.boxes = self.boxes.filter(function(bx) {
-      if (Math.hypot(bx.x - b.x, bx.y - b.y) < 5) { self.burst(bx.x, bx.y, '#cc6600', 8); return false; }
+      if (Math.hypot(bx.x-b.x, bx.y-b.y) < 5) { self.burst(bx.x, bx.y,'#cc6600',8); return false; }
       return true;
     });
-    for (var wr = 1; wr < self.R - 1; wr++) {
-      for (var wc = 1; wc < self.C - 1; wc++) {
-        if (!self.map[wr][wc]) continue;
-        var wx = wc * T + T / 2, wy = GT + wr * T + T / 2;
-        if (Math.hypot(wx - b.x, wy - b.y) < 50) {
-          self.map[wr][wc] = 0; delete self.wallHp[wr + '_' + wc]; self.burst(wx, wy, '#cc4400', 6);
-        }
-      }
+    for (var wr=1; wr<self.R-1; wr++) for (var wc=1; wc<self.C-1; wc++) {
+      if (!self.map[wr][wc]) continue;
+      var wx=wc*T+T/2, wy=GT+wr*T+T/2;
+      if (Math.hypot(wx-b.x, wy-b.y) < 50) { self.map[wr][wc]=0; delete self.wallHp[wr+'_'+wc]; self.burst(wx,wy,'#cc4400',6); }
     }
     return false;
   });
@@ -1220,21 +1221,33 @@ Game.prototype.draw = function() {
     ctx.beginPath(); ctx.arc(vol.x, vol.y, 24, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
+
+  // Draw volcano
+  if (this.volcano) {
+    var vol = this.volcano;
+    ctx.font = '36px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🌋', vol.x, vol.y);
+    var pulse2 = 0.3 + 0.3 * Math.sin(Date.now() / 300);
+    ctx.globalAlpha = pulse2;
+    ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(vol.x, vol.y, 24, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   // Draw lava blast warnings
   var now_draw = Date.now();
   this.lavaBlasts.forEach(function(b) {
     if (b.done) return;
-    var frac = Math.max(0, Math.min(1, 1 - (b.warnUntil - now_draw) / 1600));
-    var wrad = 10 + frac * 26;
-    ctx.globalAlpha = 0.25 + frac * 0.45;
+    var frac = Math.max(0, Math.min(1, 1-(b.warnUntil-now_draw)/1600));
+    var wrad = 10 + frac*26;
+    ctx.globalAlpha = 0.25 + frac*0.45;
     ctx.fillStyle = '#ff2200'; ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 0.7 + frac * 0.3;
+    ctx.globalAlpha = 0.7 + frac*0.3;
     ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.strokeStyle = 'rgba(255,80,0,0.8)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(b.x-14, b.y); ctx.lineTo(b.x+14, b.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(b.x, b.y-14); ctx.lineTo(b.x, b.y+14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x-14,b.y); ctx.lineTo(b.x+14,b.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x,b.y-14); ctx.lineTo(b.x,b.y+14); ctx.stroke();
   });
 
   // Draw gem chests
