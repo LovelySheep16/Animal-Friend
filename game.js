@@ -51,7 +51,7 @@ var PETS = [
   {id:'flamingo',e:'🦩', n:'Flamingo',   d:'Heals 12hp/3s + 18dmg',       cost:160,  cat:'✨ Hybrids',     heal:12, hi:3000, atk:18, ar:1800, sc:0},
   {id:'peacock', e:'🦚', n:'Peacock',    d:'Heals 14hp/2.5s + 22dmg',     cost:210,  cat:'✨ Hybrids',     heal:14, hi:2500, atk:22, ar:1700, sc:0},
   {id:'swan',    e:'🦢', n:'Swan',       d:'Heals 18hp/2.5s + 26dmg',     cost:270,  cat:'✨ Hybrids',     heal:18, hi:2500, atk:26, ar:1700, sc:0},
-  {id:'dragon',  e:'🐉', n:'Dragon',     d:'Heals 20hp/2.5s + 34dmg',     cost:355,  cat:'✨ Hybrids',     heal:20, hi:2500, atk:34, ar:1600, sc:0},
+  {id:'dragon',  e:'🦎', n:'Salamander',  d:'Heals 20hp/2.5s + 34dmg',     cost:355,  cat:'✨ Hybrids',     heal:20, hi:2500, atk:34, ar:1600, sc:0},
   {id:'kirin',   e:'🦒', n:'Kirin',      d:'Heals 24hp/2s + 42dmg',       cost:460,  cat:'✨ Hybrids',     heal:24, hi:2000, atk:42, ar:1500, sc:0},
   {id:'gryphon', e:'🦅', n:'Gryphon',    d:'Heals 30hp/2s + 50dmg',       cost:580,  cat:'✨ Hybrids',     heal:30, hi:2000, atk:50, ar:1400, sc:0},
   {id:'starbird',e:'🌟', n:'Star Bird',  d:'Heals 40hp/1.5s + 65dmg',     cost:780,  cat:'✨ Hybrids',     heal:40, hi:1500, atk:65, ar:1200, sc:0},
@@ -314,7 +314,7 @@ function lvlDef(lv) {
   var pe    = Math.min(MONS.length, Math.max(3, Math.ceil(pct * MONS.length)));
   var ps    = Math.max(0, pe - Math.min(10, pe));
   var pool  = MONS.slice(ps, pe);
-  var count = 14 + Math.floor(lv * 2.8);
+  var count = 40 + Math.floor(lv * 7);
   var loopLabel = loop > 0 ? ' (Loop ' + (loop + 1) + ')' : '';
   return {name: zone.flag + ' Level ' + (lv + 1) + ': ' + zone.n + loopLabel, zone: zone, pool: pool, count: count, li: zoneLv % 5, loop: loop};
 }
@@ -384,6 +384,7 @@ function Game() {
   this.potionTick = 0;
   this.towers = []; this.towerAtk = {}; this.pairTimers = {};
   this.chest = null; this.chestPet = null; this.alreadyOwned = false;
+  this.boxes = []; this.gemChests = []; this.petTrail = [];
   this.volcano = null; this.lavaBlasts = []; this.volcanoCooldown = 0;
   this.build(); this.showBanner();
 }
@@ -392,7 +393,8 @@ Game.prototype.build = function() {
   this.ld = lvlDef(this.lv);
   this.C = Math.floor(canvas.width / T); this.R = Math.floor(GH / T);
   this.map = this.genMap(this.ld.li, this.C, this.R);
-  this.p = {x: T*2+T/2, y: GT+T*2+T/2, hp: 100, mhp: 100, atk: false, at: 0, dir: 1, inv: 0};
+  this.wallHp = {};
+  this.p = {x: T*3, y: GT+T*3, hp: 100, mhp: 100, atk: false, at: 0, dir: 1, inv: 0};
   this.mons = this.spawnMons(); this.aa = 0;
 
   // Chest setup — cycle through 50 animals per loop
@@ -430,7 +432,31 @@ Game.prototype.build = function() {
   var vpos = this.rf();
   this.volcano = { x: vpos.x, y: vpos.y };
   this.lavaBlasts = [];
-  this.volcanoCooldown = 4000; // first blast after 4s
+  this.volcanoCooldown = 4000;
+
+  // Spawn boxes (avoid player start area)
+  this.boxes = [];
+  var boxCount = 8 + Math.floor(Math.random() * 6);
+  for (var bsi = 0; bsi < boxCount; bsi++) {
+    for (var bti = 0; bti < 200; bti++) {
+      var bc = 1 + Math.floor(Math.random() * (this.C - 2));
+      var br = 1 + Math.floor(Math.random() * (this.R - 2));
+      if (this.map[br][bc]) continue;
+      var bx2 = bc * T + T/2, by2 = GT + br * T + T/2;
+      if (Math.hypot(bx2 - this.p.x, by2 - this.p.y) < T * 4) continue;
+      var clash = false;
+      for (var bci = 0; bci < this.boxes.length; bci++) { if (this.boxes[bci].c === bc && this.boxes[bci].r === br) { clash = true; break; } }
+      if (!clash) { this.boxes.push({ c: bc, r: br, x: bx2, y: by2, hp: 1 }); break; }
+    }
+  }
+
+  // Spawn gem chests (3-7 per level, not required to finish)
+  this.gemChests = [];
+  var gcCount = 3 + Math.floor(Math.random() * 5);
+  for (var gi2 = 0; gi2 < gcCount; gi2++) {
+    var gcp = this.rf();
+    this.gemChests.push({ x: gcp.x, y: gcp.y, gems: 1 + Math.floor(Math.random() * 6), open: false });
+  }
 
   var n = Date.now();
   for (var i = 0; i < this.pets.length; i++) {
@@ -438,9 +464,8 @@ Game.prototype.build = function() {
     if (!pt.mhp) { pt.mhp = petMaxHp(pt); if (!pt.dead) pt.hp = pt.mhp; }
     if (!this.patk[pt.uid]) this.patk[pt.uid] = n;
     if (pt.hi > 0 && !this.ptim[pt.uid]) this.ptim[pt.uid] = n;
-    var ang = (i / Math.max(1, this.pets.length)) * Math.PI * 2;
-    pt.x = this.p.x + Math.cos(ang) * 55;
-    pt.y = this.p.y + Math.sin(ang) * 40;
+    var ppos = this.rf();
+    pt.x = ppos.x; pt.y = ppos.y;
     pt.wdx = 0; pt.wdy = 0; pt.wtim = 0; pt.healMode = false;
   }
   for (var ti = 0; ti < this.towers.length; ti++) {
@@ -453,25 +478,53 @@ Game.prototype.build = function() {
 };
 
 Game.prototype.genMap = function(li, C, R) {
-  var m = [], r, c, idx;
-  for (r = 0; r < R; r++) { m[r] = []; for (c = 0; c < C; c++) m[r][c] = (r===0||r===R-1||c===0||c===C-1) ? 1 : 0; }
-  var ws = [], mc, mr;
-  if (li === 0) {
-    mc = Math.floor(C/2); mr = Math.floor(R/2);
-    for (r = 2; r < R-2; r++) ws.push([r, mc]);
-    [mr-1, mr, mr+1].forEach(function(rr) { var i = ws.findIndex(function(x) { return x[0]===rr && x[1]===mc; }); if (i > -1) ws.splice(i, 1); });
-    for (c = 3; c < C-3; c++) ws.push([mr, c]);
-    for (c = mc-2; c <= mc+2; c++) { idx = ws.findIndex(function(x) { return x[0]===mr && x[1]===c; }); if (idx > -1) ws.splice(idx, 1); }
-  } else if (li === 1) {
-    [Math.floor(C/3), Math.floor(2*C/3)].forEach(function(xc) { for (var xr = 1; xr < R-1; xr++) if (Math.abs(xr - Math.floor(R/2)) > 2) ws.push([xr, xc]); });
-  } else if (li === 2) {
-    for (r = 2; r < R-2; r++) { if (r%4!==0) ws.push([r, Math.floor(C*.33)]); if (r%4!==2) ws.push([r, Math.floor(C*.67)]); }
-  } else if (li === 3) {
-    [[Math.floor(R/4),Math.floor(C/4)],[Math.floor(R/4),Math.floor(3*C/4)],[Math.floor(3*R/4),Math.floor(C/4)],[Math.floor(3*R/4),Math.floor(3*C/4)]].forEach(function(bc) { for (var dr = -2; dr <= 2; dr++) for (var dc = -2; dc <= 2; dc++) if (Math.abs(dr)+Math.abs(dc) > 1) ws.push([bc[0]+dr, bc[1]+dc]); });
-  } else {
-    for (var i = 0; i < Math.floor(R/3); i++) ws.push([i*3+2, Math.floor(C/3)+(i%2)*Math.floor(C/3)]);
+  // All walls to start
+  var m = [], r, c;
+  for (r = 0; r < R; r++) { m[r] = []; for (c = 0; c < C; c++) m[r][c] = 1; }
+
+  // Iterative DFS maze — cells at odd tile positions
+  var visited = [];
+  for (r = 0; r < R; r++) { visited[r] = []; for (c = 0; c < C; c++) visited[r][c] = false; }
+  var stack = [[1, 1]];
+  visited[1][1] = true; m[1][1] = 0;
+
+  while (stack.length > 0) {
+    var cur = stack[stack.length - 1];
+    var cr = cur[0], cc = cur[1];
+    var dirs = [[0,2],[0,-2],[2,0],[-2,0]];
+    // Shuffle
+    for (var si = dirs.length - 1; si > 0; si--) {
+      var sj = Math.floor(Math.random() * (si + 1));
+      var tmp = dirs[si]; dirs[si] = dirs[sj]; dirs[sj] = tmp;
+    }
+    var found = false;
+    for (var di = 0; di < dirs.length; di++) {
+      var nr = cr + dirs[di][0], nc = cc + dirs[di][1];
+      if (nr > 0 && nr < R - 1 && nc > 0 && nc < C - 1 && !visited[nr][nc]) {
+        visited[nr][nc] = true;
+        m[nr][nc] = 0;
+        m[cr + dirs[di][0]/2][cc + dirs[di][1]/2] = 0; // carve passage
+        stack.push([nr, nc]);
+        found = true; break;
+      }
+    }
+    if (!found) stack.pop();
   }
-  ws.forEach(function(w) { if (w[0]>0 && w[0]<R-1 && w[1]>0 && w[1]<C-1) m[w[0]][w[1]] = 1; });
+
+  // Add ~20% random loops so it's not a pure perfect maze
+  for (r = 1; r < R - 1; r++) {
+    for (c = 1; c < C - 1; c++) {
+      if (m[r][c] === 1 && Math.random() < 0.12) m[r][c] = 0;
+    }
+  }
+
+  // Clear an open room around the player start (top-left)
+  for (r = 1; r <= Math.min(4, R-2); r++) {
+    for (c = 1; c <= Math.min(4, C-2); c++) {
+      m[r][c] = 0;
+    }
+  }
+
   return m;
 };
 
@@ -495,6 +548,10 @@ Game.prototype.spawnMons = function() {
       at: 0, pat: 0, mt: 0, dx: 0, dy: 0, dead: false
     });
   }
+  // One random regular monster is secretly the mega monster
+  if (arr.length > 0) {
+    arr[Math.floor(Math.random() * arr.length)].isMega = true;
+  }
   return arr;
 };
 
@@ -507,7 +564,45 @@ Game.prototype.rf = function() {
   return {x:T*8, y:GT+T*5};
 };
 
-Game.prototype.tile = function(x, y) { var c = Math.floor(x/T), r = Math.floor((y-GT)/T); if (r<0||r>=this.R||c<0||c>=this.C) return 1; return this.map[r][c]; };
+Game.prototype.tile = function(x, y) {
+  var c = Math.floor(x/T), r = Math.floor((y-GT)/T);
+  if (r<0||r>=this.R||c<0||c>=this.C) return 1;
+  if (this.map[r][c]) return 1;
+  for (var bi = 0; bi < this.boxes.length; bi++) { if (this.boxes[bi].c === c && this.boxes[bi].r === r) return 1; }
+  return 0;
+};
+Game.prototype.boxAt = function(x, y) {
+  var c = Math.floor(x/T), r = Math.floor((y-GT)/T);
+  for (var bi = 0; bi < this.boxes.length; bi++) { if (this.boxes[bi].c === c && this.boxes[bi].r === r) return this.boxes[bi]; }
+  return null;
+};
+Game.prototype.tryPushBox = function(box, ddx, ddy) {
+  var nc = box.c + (ddx > 0 ? 1 : ddx < 0 ? -1 : 0);
+  var nr = box.r + (ddy > 0 ? 1 : ddy < 0 ? -1 : 0);
+  if (nc < 1 || nc >= this.C-1 || nr < 1 || nr >= this.R-1) return;
+  if (this.map[nr][nc]) return;
+  for (var bi = 0; bi < this.boxes.length; bi++) { if (this.boxes[bi].c === nc && this.boxes[bi].r === nr) return; }
+  box.c = nc; box.r = nr; box.x = nc*T+T/2; box.y = GT+nr*T+T/2;
+};
+Game.prototype.mvPlayer = function(p, dx, dy, sp, dt) {
+  var h = 14;
+  var nx = p.x + dx*sp*dt;
+  if (!this.tile(nx, p.y-h) && !this.tile(nx, p.y+h)) {
+    p.x = nx;
+  } else if (dx !== 0) {
+    var bx = this.boxAt(nx, p.y-h) || this.boxAt(nx, p.y+h);
+    if (bx) { this.tryPushBox(bx, dx, 0); if (!this.tile(nx, p.y-h) && !this.tile(nx, p.y+h)) p.x = nx; }
+  }
+  var ny = p.y + dy*sp*dt;
+  if (!this.tile(p.x, ny-h) && !this.tile(p.x, ny+h)) {
+    p.y = ny;
+  } else if (dy !== 0) {
+    var by = this.boxAt(p.x, ny-h) || this.boxAt(p.x, ny+h);
+    if (by) { this.tryPushBox(by, 0, dy); if (!this.tile(p.x, ny-h) && !this.tile(p.x, ny+h)) p.y = ny; }
+  }
+  p.x = Math.max(h, Math.min(canvas.width-h, p.x));
+  p.y = Math.max(GT+h, Math.min(GT+GH-h, p.y));
+};
 Game.prototype.mv   = function(e, dx, dy, sp, dt) {
   var nx = e.x + dx*sp*dt, ny = e.y + dy*sp*dt, h = 14;
   if (!this.tile(nx, e.y-h) && !this.tile(nx, e.y+h)) e.x = nx;
@@ -519,6 +614,16 @@ Game.prototype.mv   = function(e, dx, dy, sp, dt) {
 Game.prototype.updatePets = function(dt, now) {
   var self = this, p = this.p;
   var alive = this.mons.filter(function(m) { return !m.dead; });
+
+  // Record player trail every 4px so pets can follow the exact same path
+  var TRAIL_STEP = 4, STEPS_PER_PET = 7;
+  var lastTr = this.petTrail[0];
+  if (!lastTr || Math.hypot(p.x - lastTr.x, p.y - lastTr.y) >= TRAIL_STEP) {
+    this.petTrail.unshift({x: p.x, y: p.y});
+    var maxLen = (this.pets.length + 1) * STEPS_PER_PET + 40;
+    if (this.petTrail.length > maxLen) this.petTrail.length = maxLen;
+  }
+
 
   this.pets.forEach(function(pt) {
     if (pt.dead) return;
@@ -562,31 +667,8 @@ Game.prototype.updatePets = function(dt, now) {
       }
     }
 
-    // Attacker: volcano distracts — pets walk to volcano first, then monsters/chest
-    if (!moved && pt.atk > 0 && !pt.healMode) {
-      var vol = self.volcano;
-      var chstW = (self.chest && !self.chest.open) ? self.chest : null;
-      var chstWD = chstW ? Math.hypot(chstW.x-pt.x, chstW.y-pt.y) : Infinity;
-      var volD  = vol ? Math.hypot(vol.x-pt.x, vol.y-pt.y) : Infinity;
-      // Volcano always draws pet attention
-      if (vol && volD < 300) {
-        if (volD > 32) self.mv(pt, (vol.x-pt.x)/volD, (vol.y-pt.y)/volD, APPROACH, dt);
-        moved = true;
-      } else if (alive.length) {
-        var near = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
-        var dn = Math.hypot(near.x-pt.x, near.y-pt.y);
-        var wx = (chstW && chstWD < dn) ? chstW.x : near.x;
-        var wy = (chstW && chstWD < dn) ? chstW.y : near.y;
-        var wd = (chstW && chstWD < dn) ? chstWD : dn;
-        if (wd > 32) self.mv(pt, (wx-pt.x)/wd, (wy-pt.y)/wd, APPROACH, dt);
-        moved = true;
-      } else if (chstW) {
-        if (chstWD > 32) self.mv(pt, (chstW.x-pt.x)/chstWD, (chstW.y-pt.y)/chstWD, APPROACH, dt);
-        moved = true;
-      }
-    }
 
-    // Attack trigger (from pet's own position) — volcano soaks attacks, can't die
+    // Attack trigger — volcano soaks attacks (no damage, visual only)
     if (pt.atk > 0 && pt.ar > 0) {
       var vol2 = self.volcano;
       var chstA = (self.chest && !self.chest.open) ? self.chest : null;
@@ -598,7 +680,6 @@ Game.prototype.updatePets = function(dt, now) {
         if (now - self.patk[uid] >= pt.ar) {
           self.patk[uid] = now;
           var fc = pt.id==='dragon'?'#ff7700':pt.id==='god'?'#ffff00':pt.id==='cerberus'?'#ff4400':'#70b0ff';
-          // Volcano takes priority: absorbs attacks (no damage, just visual)
           if (vol2 && vol2D < 260) {
             self.fx.push({x1:pt.x, y1:pt.y, x2:vol2.x, y2:vol2.y, l:200, c:'#ff6600'});
             self.fl(vol2.x, vol2.y - 10, '🔥', '#ff6600');
@@ -620,17 +701,15 @@ Game.prototype.updatePets = function(dt, now) {
       }
     }
 
-    // Wander when nothing else to do
+    // Trail follow: each pet targets its own point on the player's path history
     if (!moved) {
-      pt.wtim = (pt.wtim||0) - dt*1000;
-      if (pt.wtim <= 0) {
-        var wa = Math.random()*Math.PI*2;
-        pt.wdx = Math.cos(wa); pt.wdy = Math.sin(wa);
-        pt.wtim = 600 + Math.random()*900;
+      var pidx = self.pets.indexOf(pt);
+      var trailIdx = Math.min((pidx + 1) * STEPS_PER_PET, self.petTrail.length - 1);
+      if (trailIdx >= 0) {
+        var tgt = self.petTrail[trailIdx];
+        var ftx = tgt.x - pt.x, fty = tgt.y - pt.y, ftd = Math.hypot(ftx, fty);
+        if (ftd > 2) { self.mv(pt, ftx / ftd, fty / ftd, 260, dt); }
       }
-      var fdx = p.x-pt.x, fdy = p.y-pt.y, fd = Math.hypot(fdx,fdy);
-      if (fd > 200) { self.mv(pt, fdx/fd, fdy/fd, WANDER, dt); }
-      else { self.mv(pt, pt.wdx||0, pt.wdy||0, WANDER, dt); }
     }
   });
 };
@@ -663,62 +742,47 @@ Game.prototype.updateTowers = function(dt, now) {
   });
 };
 
+
 Game.prototype.updateVolcano = function(dt, now) {
   if (!this.volcano || this.dead || this.trans) return;
   var self = this, p = this.p, vol = this.volcano;
   var LAVA_RADIUS = 36, WARN_MS = 1600;
-
-  // Count down to next blast
   this.volcanoCooldown -= dt * 1000;
   if (this.volcanoCooldown <= 0) {
     this.volcanoCooldown = 4500 + Math.random() * 2000;
-    // Closer to volcano = higher chance lava targets the player
     var distToVol = Math.hypot(p.x - vol.x, p.y - vol.y);
     var playerChance = Math.max(0.05, 1 - distToVol / 320);
     var tx, ty;
     if (Math.random() < playerChance) {
-      // Target near the player with a small spread
-      var spread = 30;
-      tx = p.x + (Math.random() - 0.5) * spread * 2;
-      ty = p.y + (Math.random() - 0.5) * spread * 2;
-    } else {
-      var target = this.rf();
-      tx = target.x; ty = target.y;
-    }
+      tx = p.x + (Math.random() - 0.5) * 60; ty = p.y + (Math.random() - 0.5) * 60;
+    } else { var tgt = this.rf(); tx = tgt.x; ty = tgt.y; }
     this.lavaBlasts.push({ x: tx, y: ty, warnUntil: now + WARN_MS, done: false });
   }
-
-  // Process pending blasts
   this.lavaBlasts = this.lavaBlasts.filter(function(b) {
     if (b.done) return false;
-    if (now < b.warnUntil) return true; // still warning
+    if (now < b.warnUntil) return true;
     b.done = true;
-    // Deal 200 damage to player if in range
     if (Math.hypot(p.x - b.x, p.y - b.y) < LAVA_RADIUS) {
-      p.hp -= 200;
-      self.burst(b.x, b.y, '#ff4400', 18);
-      self.fl(b.x, b.y, '-200🔥', '#ff4400');
+      p.hp -= 200; self.burst(b.x, b.y, '#ff4400', 18); self.fl(b.x, b.y, '-200🔥', '#ff4400');
       if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); }
-    } else {
-      self.burst(b.x, b.y, '#ff6600', 14);
-    }
-    // Deal 200 damage to pets in range
+    } else { self.burst(b.x, b.y, '#ff6600', 14); }
     self.pets.forEach(function(pt) {
       if (pt.dead || pt.x === undefined) return;
       if (Math.hypot(pt.x - b.x, pt.y - b.y) < LAVA_RADIUS) {
-        pt.hp -= 200;
-        self.fl(pt.x, pt.y, '-200🔥', '#ff4400');
+        pt.hp -= 200; self.fl(pt.x, pt.y, '-200🔥', '#ff4400');
         if (pt.hp <= 0) self.killPet(pt);
       }
     });
-    // Blast walls within 50px of impact (never removes border tiles)
+    self.boxes = self.boxes.filter(function(bx) {
+      if (Math.hypot(bx.x - b.x, bx.y - b.y) < 5) { self.burst(bx.x, bx.y, '#cc6600', 8); return false; }
+      return true;
+    });
     for (var wr = 1; wr < self.R - 1; wr++) {
       for (var wc = 1; wc < self.C - 1; wc++) {
         if (!self.map[wr][wc]) continue;
         var wx = wc * T + T / 2, wy = GT + wr * T + T / 2;
         if (Math.hypot(wx - b.x, wy - b.y) < 50) {
-          self.map[wr][wc] = 0;
-          self.burst(wx, wy, '#cc4400', 6);
+          self.map[wr][wc] = 0; delete self.wallHp[wr + '_' + wc]; self.burst(wx, wy, '#cc4400', 6);
         }
       }
     }
@@ -761,6 +825,7 @@ Game.prototype.awardBreedPet = function(def) {
   instance.x = p.x + Math.cos(ang)*55; instance.y = p.y + Math.sin(ang)*45;
   instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
+  if (runSpeciesCount(def.id) >= 50) return;
   this.pets.push(instance);
   this.floats.push({x:p.x, y:p.y-50, t:'🧬 '+def.e+' '+def.n+' bred!', c:'#ff80ff', l:2200});
   sndBuyPet();
@@ -770,6 +835,7 @@ Game.prototype.killPet = function(pt) {
   pt.hp = 0; pt.dead = true;
   this.burst(pt.x, pt.y, '#ff4444', 8);
   this.floats.push({x:pt.x, y:pt.y-30, t:'💀 '+pt.e+' '+pt.n+' fell!', c:'#ff6644', l:2800});
+  this.pets = this.pets.filter(function(p) { return p !== pt; });
 };
 
 Game.prototype.update = function(dt) {
@@ -780,7 +846,18 @@ Game.prototype.update = function(dt) {
   if (keys.ArrowUp    || keys.KeyW) dy = -1;
   if (keys.ArrowDown  || keys.KeyS) dy =  1;
   if (dx && dy) { dx *= .707; dy *= .707; }
-  this.mv(p, dx, dy, 185 * (1 + 0.15 * this.upg.speed), dt);
+  this.mvPlayer(p, dx, dy, 185 * (1 + 0.15 * this.upg.speed), dt);
+  // Gem chest pickup
+  var self2 = this;
+  this.gemChests.forEach(function(gc) {
+    if (!gc.open && Math.hypot(gc.x - p.x, gc.y - p.y) < 28) {
+      gc.open = true;
+      self2.gems += gc.gems; self2.score += gc.gems * 10;
+      self2.fl(gc.x, gc.y - 10, '+' + gc.gems + '💎', '#ffd700');
+      self2.burst(gc.x, gc.y, '#ffd700', 8);
+      sndBuyPet();
+    }
+  });
   p.at = Math.max(0, p.at - dt*1000);
   if (keys.Space && p.at <= 0) { p.atk = true; p.at = 380; this.aa = 280; this.doAtk(); }
   if (p.at <= 0) p.atk = false;
@@ -902,13 +979,57 @@ Game.prototype.doAtk = function() {
     this.dmgChest(dmg);
     this.fx.push({x1:p.x, y1:p.y, x2:this.chest.x, y2:this.chest.y, l:180, c:'#ff8800'});
   }
+  // Destroy boxes in range
+  this.boxes = this.boxes.filter(function(b) {
+    if (Math.hypot(b.x - p.x, b.y - p.y) < range) {
+      self.burst(b.x, b.y, '#cc8800', 8);
+      self.fx.push({x1:p.x, y1:p.y, x2:b.x, y2:b.y, l:180, c:atkColor});
+      return false;
+    }
+    return true;
+  });
+  // Damage wall tiles in range (not border walls); walls have 1000 HP
+  var wallRange = range * 0.75;
+  for (var wr = 1; wr < this.R - 1; wr++) {
+    for (var wc = 1; wc < this.C - 1; wc++) {
+      if (!this.map[wr][wc]) continue;
+      var wx = wc * T + T/2, wy = GT + wr * T + T/2;
+      if (Math.hypot(wx - p.x, wy - p.y) < wallRange) {
+        var wk = wr + '_' + wc;
+        if (this.wallHp[wk] === undefined) this.wallHp[wk] = 1000;
+        this.wallHp[wk] -= dmg;
+        if (this.wallHp[wk] <= 0) {
+          this.map[wr][wc] = 0;
+          delete this.wallHp[wk];
+          this.burst(wx, wy, '#886644', 5);
+          p.hp = Math.max(1, p.hp - 20);
+          this.fl(p.x, p.y - 20, '-20 HP (wall)', '#ff6666');
+        } else {
+          this.fl(wx, wy - 10, '' + this.wallHp[wk], '#cc9966');
+        }
+      }
+    }
+  }
   this.burst(p.x + p.dir*26, p.y, atkColor, 3);
 };
 
 Game.prototype.kill  = function(m) {
-  if (m.dead) return; m.dead = true;
+  if (m.dead) return;
+  // Mega monster is unkillable while any other monster is still alive
+  if (m.isMega) {
+    var othersAlive = this.mons.some(function(o) { return o !== m && !o.dead && !o.reviving; });
+    if (othersAlive) {
+      m.hp = Math.ceil(m.mhp * 0.08); // bounce back
+      this.fl(m.x, m.y - 18, '🔒 Kill all first!', '#ff4444');
+      return;
+    }
+  }
+  m.dead = true;
   this.gems += m.gem; this.score += m.gem*10;
   this.burst(m.x, m.y, '#ffd700', 10); this.fl(m.x, m.y, '+' + m.gem + '💎', '#ffd700'); sndKill();
+  var _p = this.p;
+  this.pets.forEach(function(pt) { pt.x = _p.x; pt.y = _p.y; });
+  this.petTrail = [];
   if (m.isGuardian && this.chest && !this.chest.open) {
     this.floats.push({x:this.chest.x, y:this.chest.y-35, t:'⚔️ Attack the chest!', c:'#ff8800', l:3500});
   } else if (!m.isGuardian && !m.isGuard) {
@@ -940,6 +1061,7 @@ Game.prototype.awardFreePet = function(lv) {
   instance.x = p.x + Math.cos(ang) * 50; instance.y = p.y + Math.sin(ang) * 40;
   instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
+  if (runSpeciesCount(chosen.id) >= 50) { this.floats.push({x:p.x, y:p.y-45, t:'⛔ ' + chosen.e + ' full! (50/50)', c:'#ff6666', l:2200}); return; }
   this.pets.push(instance);
   this.floats.push({x:p.x, y:p.y - 45, t:'🎁 ' + chosen.e + ' ' + chosen.n + ' joins!', c:'#ffd700', l:2200});
 };
@@ -1067,6 +1189,26 @@ Game.prototype.draw = function() {
     }
   }
 
+  // Draw boxes — Pac-Man maze block style
+  this.boxes.forEach(function(b) {
+    var bx = b.x - T/2, by = b.y - T/2, bw = T, bh = T;
+    // Dark navy fill
+    ctx.fillStyle = '#00004a';
+    ctx.fillRect(bx, by, bw, bh);
+    // Bright blue border (thick, Pac-Man wall look)
+    ctx.strokeStyle = '#3355ff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(bx + 2, by + 2, bw - 4, bh - 4);
+    // Inner lighter blue highlight (top-left corner glow)
+    ctx.strokeStyle = '#6699ff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx + 6, by + bh - 6);
+    ctx.lineTo(bx + 6, by + 6);
+    ctx.lineTo(bx + bw - 6, by + 6);
+    ctx.stroke();
+  });
+
   // Draw volcano
   if (this.volcano) {
     var vol = this.volcano;
@@ -1078,25 +1220,30 @@ Game.prototype.draw = function() {
     ctx.beginPath(); ctx.arc(vol.x, vol.y, 24, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
-
   // Draw lava blast warnings
   var now_draw = Date.now();
   this.lavaBlasts.forEach(function(b) {
     if (b.done) return;
-    var frac = 1 - (b.warnUntil - now_draw) / 1600;
-    frac = Math.max(0, Math.min(1, frac));
+    var frac = Math.max(0, Math.min(1, 1 - (b.warnUntil - now_draw) / 1600));
     var wrad = 10 + frac * 26;
     ctx.globalAlpha = 0.25 + frac * 0.45;
-    ctx.fillStyle = '#ff2200';
-    ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ff2200'; ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.fill();
     ctx.globalAlpha = 0.7 + frac * 0.3;
     ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.strokeStyle = 'rgba(255,80,0,0.8)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(b.x - 14, b.y); ctx.lineTo(b.x + 14, b.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(b.x, b.y - 14); ctx.lineTo(b.x, b.y + 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x-14, b.y); ctx.lineTo(b.x+14, b.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x, b.y-14); ctx.lineTo(b.x, b.y+14); ctx.stroke();
   });
+
+  // Draw gem chests
+  this.gemChests.forEach(function(gc) {
+    if (gc.open) return;
+    ctx.font = '18px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🎁', gc.x, gc.y);
+  });
+
 
   this.towers.forEach(function(tw) {
     if (tw.dead) return;
@@ -1150,9 +1297,9 @@ Game.prototype.draw = function() {
     ctx.font = '14px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(pt.e, pt.x, pt.y);
     if (pt.mhp && pt.hp < pt.mhp) {
-      var bw = 22, bx = pt.x - bw/2, by = pt.y - 14;
-      ctx.fillStyle = '#500'; ctx.fillRect(bx, by, bw, 3);
-      ctx.fillStyle = '#44ff66'; ctx.fillRect(bx, by, Math.max(0, bw * (pt.hp/pt.mhp)), 3);
+      var bw = 22, bx2 = pt.x - bw/2, by2 = pt.y - 14;
+      ctx.fillStyle = '#500'; ctx.fillRect(bx2, by2, bw, 3);
+      ctx.fillStyle = '#44ff66'; ctx.fillRect(bx2, by2, Math.max(0, bw * (pt.hp/pt.mhp)), 3);
     }
   });
 
@@ -1276,8 +1423,9 @@ function renderShop() {
       var petCount = G.pets.filter(function(x) { return x.id === pt.id; }).length;
       var twrCount = G.towers.filter(function(x) { return x.id === pt.id; }).length;
       var total = petCount + twrCount;
-      var ca    = G.gems < pt.cost;
-      var badge = total > 0 ? '<div class="owned-badge">x' + total + '</div>' : '';
+      var full  = runSpeciesCount(pt.id) >= 50;
+      var ca    = G.gems < pt.cost || full;
+      var badge = total > 0 ? '<div class="owned-badge">' + (full ? '50/50' : 'x'+total) + '</div>' : '';
       html += '<div class="sc ' + cls + (ca ? ' ca' : '') + '">';
       html += badge;
       html += '<div class="pe">' + pt.e + '</div>';
@@ -1304,9 +1452,14 @@ function buyUpgrade(id) {
   renderShop();
 }
 
+function runSpeciesCount(id) {
+  return G.pets.filter(function(p) { return p.id === id && !p.dead; }).length;
+}
+
 function buyPet(id) {
   var pt = PETS.find(function(p) { return p.id === id; });
   if (!pt || G.gems < pt.cost) return;
+  if (runSpeciesCount(id) >= 50) { G.fl(G.p.x, G.p.y - 30, '⛔ ' + pt.n + ' full! (50/50)', '#ff6666'); return; }
   G.gems -= pt.cost;
   var instance = {};
   for (var k in pt) instance[k] = pt[k];
@@ -1352,7 +1505,7 @@ function metaReturn(won) {
   document.getElementById('wov').style.display = 'none';
   if (!G) { if (window.showHub) window.showHub(); return; }
   if (window.META_onRunEnd) {
-    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {});
+    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0);
   } else {
     restart();
   }

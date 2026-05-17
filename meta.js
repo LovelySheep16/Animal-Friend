@@ -73,6 +73,48 @@
   ];
   window.SERVANTS = SERVANTS;
 
+  var DRAGON_TYPES = {
+    aquarium: { e:'💧', n:'Sea Dragon',     rubyPerDay:3  },
+    forest:   { e:'🍃', n:'Forest Dragon',  rubyPerDay:5  },
+    savanna:  { e:'🔥', n:'Fire Dragon',    rubyPerDay:7  },
+    sky:      { e:'⚡', n:'Storm Dragon',   rubyPerDay:10 },
+    mythical: { e:'💎', n:'Crystal Dragon', rubyPerDay:15 },
+    world:    { e:'🌍', n:'Earth Dragon',   rubyPerDay:6  },
+  };
+
+  function dragonTimeLeft(ms) {
+    if (ms <= 0) return 'ready!';
+    var d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000);
+    var m = Math.floor((ms % 3600000) / 60000);
+    if (d > 0) return d + 'd ' + h + 'h';
+    if (h > 0) return h + 'h ' + m + 'm';
+    return m + 'm';
+  }
+
+  function getOccupiedHabitats(homePets) {
+    var keys = ['aquarium','forest','savanna','sky','mythical'];
+    var occupied = {};
+    (homePets || []).forEach(function(p) {
+      for (var i = 0; i < HABITATS.length - 1; i++) {
+        if (HABITATS[i].ids.indexOf(p.id) >= 0) { occupied[keys[i]] = true; break; }
+      }
+    });
+    var result = Object.keys(occupied);
+    return result.length ? result : keys;
+  }
+
+  function checkDragonHatch(acc) {
+    var now = Date.now(), changed = false;
+    acc.dragonEggs = (acc.dragonEggs || []).filter(function(egg) {
+      if (now >= egg.hatchAt) {
+        acc.dragons.push({ habitat: egg.habitat, hatchedAt: now, lastCollect: now });
+        changed = true; return false;
+      }
+      return true;
+    });
+    if (changed) saveAccount(acc);
+  }
+
   function ensureItems(acc) {
     if (!acc.shopItems)    acc.shopItems    = { speed:0, attack:0, petluck:0, potion:0 };
     if (!acc.homePets)     acc.homePets     = [];
@@ -82,6 +124,8 @@
     if (!acc.activeWeapon)      acc.activeWeapon      = null;
     if (!acc.servants)          acc.servants          = {};
     if (!acc.lastServantCollect)acc.lastServantCollect = Date.now();
+    if (!acc.dragonEggs)        acc.dragonEggs        = [];
+    if (!acc.dragons)           acc.dragons           = [];
     return acc;
   }
 
@@ -118,7 +162,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -136,6 +180,7 @@ function speciesCount(acc, petId) {
   // ── Hub ───────────────────────────────────────────────────────────────────
   function showHub() {
     var acc = ensureItems(getAccount());
+    checkDragonHatch(acc);
     document.getElementById('hub-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel;
     renderHomePets(acc.homePets);
@@ -143,12 +188,116 @@ function speciesCount(acc, petId) {
   }
   window.showHub = showHub;
 
+  // ── Dragons ───────────────────────────────────────────────────────────────
+  function showDragons() {
+    var acc = ensureItems(getAccount());
+    checkDragonHatch(acc);
+    document.getElementById('dragon-rubies').textContent = acc.rubies + ' 🔴';
+
+    var eggsEl = document.getElementById('dragon-eggs-section');
+    if (acc.dragonEggs.length) {
+      eggsEl.innerHTML = '<div class="dragon-section-title">🥚 Eggs Hatching</div>' +
+        acc.dragonEggs.map(function(egg) {
+          var dt = DRAGON_TYPES[egg.habitat] || DRAGON_TYPES.world;
+          var left = dragonTimeLeft(egg.hatchAt - Date.now());
+          return '<div class="dragon-egg-row">' + dt.e + ' <b>' + dt.n + ' Egg</b> — hatches in <span class="dragon-time">' + left + '</span></div>';
+        }).join('');
+    } else {
+      eggsEl.innerHTML = '<div class="dragon-section-title">🥚 Eggs Hatching</div>' +
+        '<div class="dragon-none">No eggs — reach level 5, 10, 15… for a 20% chance each!</div>';
+    }
+
+    var listEl = document.getElementById('dragon-list-section');
+    if (acc.dragons.length) {
+      listEl.innerHTML = '<div class="dragon-section-title">🐲 Your Dragons</div>' +
+        acc.dragons.map(function(d, i) {
+          var dt = DRAGON_TYPES[d.habitat] || DRAGON_TYPES.world;
+          var elapsed = Math.max(0, Date.now() - (d.lastCollect || d.hatchedAt));
+          var pending = Math.floor(elapsed / 86400000) * dt.rubyPerDay;
+          return '<div class="dragon-item">' +
+            '<span class="dragon-icon">' + dt.e + '</span>' +
+            '<div class="dragon-info"><b>' + dt.n + '</b><small>' + dt.rubyPerDay + ' 🔴/day</small></div>' +
+            '<button class="btn' + (pending > 0 ? ' btng' : '') + ' dragon-btn" onclick="collectDragon(' + i + ')"' +
+            (pending <= 0 ? ' disabled' : '') + '>📦 +' + pending + ' 🔴</button>' +
+            '</div>';
+        }).join('');
+    } else {
+      listEl.innerHTML = '<div class="dragon-section-title">🐲 Your Dragons</div>' +
+        '<div class="dragon-none">No dragons yet — wait 30 days for an egg to hatch!</div>';
+    }
+    showScreen('screen-dragons');
+  }
+  window.showDragons = showDragons;
+
+  window.collectDragon = function(idx) {
+    var acc = ensureItems(getAccount());
+    var d = acc.dragons[idx]; if (!d) return;
+    var dt = DRAGON_TYPES[d.habitat] || DRAGON_TYPES.world;
+    var elapsed = Math.max(0, Date.now() - (d.lastCollect || d.hatchedAt));
+    var rubies = Math.floor(elapsed / 86400000) * dt.rubyPerDay;
+    if (rubies <= 0) return;
+    acc.rubies += rubies; d.lastCollect = Date.now();
+    saveAccount(acc); showDragons();
+  };
+
+  window.collectAllDragons = function() {
+    var acc = ensureItems(getAccount()), total = 0;
+    acc.dragons.forEach(function(d) {
+      var dt = DRAGON_TYPES[d.habitat] || DRAGON_TYPES.world;
+      var elapsed = Math.max(0, Date.now() - (d.lastCollect || d.hatchedAt));
+      var rubies = Math.floor(elapsed / 86400000) * dt.rubyPerDay;
+      if (rubies > 0) { acc.rubies += rubies; d.lastCollect = Date.now(); total += rubies; }
+    });
+    saveAccount(acc); showDragons();
+  };
+
+  var HABITATS = [
+    { label:'🌊 Aquarium', bg:'#001830', border:'#0055bb',
+      ids:['shark','kraken','narwhal','whale','leviathan','otter','crab','turtle','penguin','duck','swan','frog'] },
+    { label:'🌿 Forest',   bg:'#091a04', border:'#2d8a2d',
+      ids:['bunny','deer','fox','wolf','panda','koala','monkey','dog','cat','mouse','polarbear','chick','owl'] },
+    { label:'🦁 Savanna',  bg:'#1e1000', border:'#cc6600',
+      ids:['lion','tiger','trex','rhino','hippo','gorilla','elephant','mammoth','direlion','stonegiant','scorpion','serpent'] },
+    { label:'☁️ Sky',      bg:'#04102a', border:'#3366cc',
+      ids:['parrot','dove','flamingo','peacock','phoenix','gryphon','starbird','vampbat'] },
+    { label:'✨ Mythical', bg:'#12002a', border:'#9933cc',
+      ids:['dragon','kirin','unicorn','cerberus','god'] },
+    { label:'🌍 World',    bg:'#0a0a1a', border:'#445566', ids:[] }
+  ];
+
   function renderHomePets(pets) {
     var el = document.getElementById('hub-pets');
     if (!pets || !pets.length) { el.innerHTML = '<div class="hub-no-pets">No pets yet — play levels to collect them!</div>'; return; }
-    el.innerHTML = pets.map(function(p) {
-      return '<div class="hub-pet" title="' + p.n + '">' + p.e + '<span class="hub-pet-name">' + p.n + '</span></div>';
-    }).join('');
+
+    // Deduplicate by species, keep count
+    var seen = {}, unique = [];
+    pets.forEach(function(p) { if (!seen[p.id]) { seen[p.id] = 0; unique.push(p); } seen[p.id]++; });
+
+    // Assign each unique pet to its habitat
+    HABITATS.forEach(function(h) { h.pets = []; });
+    unique.forEach(function(p) {
+      var placed = false;
+      for (var i = 0; i < HABITATS.length - 1; i++) {
+        if (HABITATS[i].ids.indexOf(p.id) >= 0) { HABITATS[i].pets.push(p); placed = true; break; }
+      }
+      if (!placed) HABITATS[HABITATS.length - 1].pets.push(p);
+    });
+
+    var html = '<div class="habitat-wrap">';
+    HABITATS.forEach(function(h) {
+      if (!h.pets.length) return;
+      var dur = 8, shown = h.pets.slice(0, 8);
+      html += '<div class="habitat" style="background:' + h.bg + ';border-color:' + h.border + '">';
+      html += '<div class="habitat-label">' + h.label + '</div>';
+      shown.forEach(function(p, i) {
+        var delay = (-(i / shown.length) * dur).toFixed(2);
+        var count = seen[p.id] > 1 ? '<span class="habitat-count">×' + seen[p.id] + '</span>' : '';
+        html += '<div class="habitat-pet" style="animation-duration:' + dur + 's;animation-delay:' + delay + 's" title="' + p.n + ' ×' + seen[p.id] + '">' + p.e + count + '</div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
   }
 
   // ── Levels ────────────────────────────────────────────────────────────────
@@ -163,10 +312,27 @@ function speciesCount(acc, petId) {
     if (window.META_startGame) window.META_startGame(config, pickBattlePets(acc.homePets));
   };
 
-  window.META_onRunEnd = function (won, pets, level, homePetUIDs) {
+  window.META_onRunEnd = function (won, pets, level, homePetUIDs, score, gems) {
     var acc = ensureItems(getAccount());
     if (level > acc.highestLevel) acc.highestLevel = level;
-    acc.rubies += level;
+    // Performance bonus: 1 ruby per 500 score points
+    var perfBonus = Math.floor((score || 0) / 500);
+    // Gem conversion: 1/20 of gems become rubies
+    var gemRubies = Math.floor((gems || 0) / 20);
+    var totalRubies = perfBonus + gemRubies;
+    acc.rubies += totalRubies;
+    // Dragon egg: 1 roll per 5-level milestone passed, 20% each
+    var eggRolls = Math.floor(level / 5), eggsGot = 0;
+    for (var ri = 0; ri < eggRolls; ri++) {
+      if (Math.random() < 0.20) {
+        var habPool = getOccupiedHabitats(acc.homePets);
+        var allHabs = ['aquarium','forest','savanna','sky','mythical','world'];
+        var pool = habPool.length ? habPool : allHabs;
+        var hab = pool[Math.floor(Math.random() * pool.length)];
+        acc.dragonEggs.push({ habitat: hab, hatchAt: Date.now() + 30*24*60*60*1000 });
+        eggsGot++;
+      }
+    }
     var petsGoingHome = [];
     (pets || []).forEach(function(p) {
       if (homePetUIDs && homePetUIDs[p.uid]) return;
@@ -180,7 +346,9 @@ function speciesCount(acc, petId) {
     titleEl.textContent = '💀 You Died';
     titleEl.style.color = '#ff5050';
     document.getElementById('result-level').textContent  = 'Level reached: ' + level;
-    document.getElementById('result-rubies').textContent = '+' + level + ' 🔴 rubies';
+    document.getElementById('result-rubies').textContent =
+      '+' + totalRubies + ' 🔴  (score bonus: ' + perfBonus + '  ·  gems→rubies: ' + gemRubies + ')' +
+      (eggsGot ? '  ·  🥚 ×' + eggsGot + ' dragon egg' + (eggsGot > 1 ? 's' : '') + '!' : '');
     var petsEl = document.getElementById('result-pets');
     var homePetCount = Object.keys(homePetUIDs || {}).length;
     if (petsGoingHome.length > 0) {

@@ -41,7 +41,24 @@
         <span class="hab-label">Servants</span>
         <span class="hab-desc">AI helpers earn while you're away<br><small>50 servants to hire</small></span>
       </button>
+      <button class="hub-action-btn" onclick="showDragons()">
+        <span class="hab-icon">🥚</span>
+        <span class="hab-label">Dragons</span>
+        <span class="hab-desc">Hatch eggs, collect daily rubies<br><small>Egg every 5 levels · 20% chance</small></span>
+      </button>
     </div>
+  </div>
+</div>
+
+<!-- ── Dragons ────────────────────────────────────────────── -->
+<div id="screen-dragons" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🥚 Dragons</div>
+    <div class="shop-rubies">Rubies: <span id="dragon-rubies">0 🔴</span></div>
+    <div id="dragon-eggs-section"></div>
+    <div id="dragon-list-section"></div>
+    <button class="btn btng" style="margin:8px auto;display:block" onclick="collectAllDragons()">📦 Collect All Income</button>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
   </div>
 </div>
 
