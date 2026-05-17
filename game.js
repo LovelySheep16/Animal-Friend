@@ -826,7 +826,7 @@ Game.prototype.awardBreedPet = function(def) {
   instance.x = p.x + Math.cos(ang)*55; instance.y = p.y + Math.sin(ang)*45;
   instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
-  if (runSpeciesCount(def.id) >= 50) return;
+  if (runSpeciesCount(def.id) >= 10) return;
   this.pets.push(instance);
   this.floats.push({x:p.x, y:p.y-50, t:'🧬 '+def.e+' '+def.n+' bred!', c:'#ff80ff', l:2200});
   sndBuyPet();
@@ -1062,7 +1062,7 @@ Game.prototype.awardFreePet = function(lv) {
   instance.x = p.x + Math.cos(ang) * 50; instance.y = p.y + Math.sin(ang) * 40;
   instance.mhp = petMaxHp(instance); instance.hp = instance.mhp; instance.dead = false;
   instance.wdx = 0; instance.wdy = 0; instance.wtim = 0; instance.healMode = false;
-  if (runSpeciesCount(chosen.id) >= 50) { this.floats.push({x:p.x, y:p.y-45, t:'⛔ ' + chosen.e + ' full! (50/50)', c:'#ff6666', l:2200}); return; }
+  if (runSpeciesCount(chosen.id) >= 10) { this.floats.push({x:p.x, y:p.y-45, t:'⛔ ' + chosen.e + ' full! (10/10)', c:'#ff6666', l:2200}); return; }
   this.pets.push(instance);
   this.floats.push({x:p.x, y:p.y - 45, t:'🎁 ' + chosen.e + ' ' + chosen.n + ' joins!', c:'#ffd700', l:2200});
 };
@@ -1436,9 +1436,9 @@ function renderShop() {
       var petCount = G.pets.filter(function(x) { return x.id === pt.id; }).length;
       var twrCount = G.towers.filter(function(x) { return x.id === pt.id; }).length;
       var total = petCount + twrCount;
-      var full  = runSpeciesCount(pt.id) >= 50;
+      var full  = runSpeciesCount(pt.id) >= 10;
       var ca    = G.gems < pt.cost || full;
-      var badge = total > 0 ? '<div class="owned-badge">' + (full ? '50/50' : 'x'+total) + '</div>' : '';
+      var badge = total > 0 ? '<div class="owned-badge">' + (full ? '10/10' : 'x'+total) + '</div>' : '';
       html += '<div class="sc ' + cls + (ca ? ' ca' : '') + '">';
       html += badge;
       html += '<div class="pe">' + pt.e + '</div>';
@@ -1472,7 +1472,7 @@ function runSpeciesCount(id) {
 function buyPet(id) {
   var pt = PETS.find(function(p) { return p.id === id; });
   if (!pt || G.gems < pt.cost) return;
-  if (runSpeciesCount(id) >= 50) { G.fl(G.p.x, G.p.y - 30, '⛔ ' + pt.n + ' full! (50/50)', '#ff6666'); return; }
+  if (runSpeciesCount(id) >= 10) { G.fl(G.p.x, G.p.y - 30, '⛔ ' + pt.n + ' full! (10/10)', '#ff6666'); return; }
   G.gems -= pt.cost;
   var instance = {};
   for (var k in pt) instance[k] = pt[k];
