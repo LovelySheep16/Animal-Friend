@@ -327,10 +327,16 @@ function petRole(pt) {
 }
 
 var keys = {};
+var _isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
 window.addEventListener('keydown', function(e) {
   var tag = e.target && e.target.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-  keys[e.code] = true; e.preventDefault();
+  keys[e.code] = true;
+  if (e.code === 'KeyE' && G && !G.dead && !G.win) {
+    if (G.open) closeShop(); else openShop();
+  }
+  e.preventDefault();
 });
 window.addEventListener('keyup', function(e) {
   var tag = e.target && e.target.tagName;
@@ -359,10 +365,6 @@ canvas.addEventListener('touchmove', function(e) {
 }, { passive: false });
 canvas.addEventListener('touchend', function(e) {
   e.preventDefault();
-  if (_touch && !_touch.moved) {
-    keys['Space'] = true;
-    setTimeout(function() { keys['Space'] = false; }, 150);
-  }
   keys['ArrowRight'] = keys['ArrowLeft'] = keys['ArrowDown'] = keys['ArrowUp'] = false;
   _touch = null;
 }, { passive: false });
@@ -1331,7 +1333,7 @@ Game.prototype.draw = function() {
   if (this.help && Date.now() - this.t0 < 9000) {
     ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(canvas.width/2-170, canvas.height-66, 340, 50);
     ctx.fillStyle = '#d8c0f8'; ctx.font = '14px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText('Arrow keys / WASD = move   SPACE = attack', canvas.width/2, canvas.height-49);
+    ctx.fillText('Arrow keys / WASD = move  ·  SPACE = attack  ·  E = shop', canvas.width/2, canvas.height-49);
     ctx.fillText('Kill 💀 guardian → ⚔️ attack 📦 chest to open it & get a wild pet!', canvas.width/2, canvas.height-30);
   } else if (Date.now() - this.t0 >= 9000) {
     this.help = false;
@@ -1399,8 +1401,36 @@ function getCatCls(cat) {
   return 'legendary';
 }
 
-function openShop()  { if (!G || G.dead || G.win) return; G.open = true; renderShop(); document.getElementById('ov').style.display = 'flex'; }
-function closeShop() { if (!G) return; G.open = false; document.getElementById('ov').style.display = 'none'; }
+function openShop()  {
+  if (!G || G.dead || G.win) return;
+  G.open = true; renderShop();
+  document.getElementById('ov').style.display = 'flex';
+  if (_isTouchDevice) {
+    document.getElementById('touch-atk').style.display = 'none';
+    document.getElementById('touch-shop').style.display = 'none';
+  }
+}
+function closeShop() {
+  if (!G) return;
+  G.open = false;
+  document.getElementById('ov').style.display = 'none';
+  if (_isTouchDevice) {
+    document.getElementById('touch-atk').style.display = '';
+    document.getElementById('touch-shop').style.display = '';
+  }
+}
+
+function touchAtkDown(e) {
+  if (e) e.preventDefault();
+  if (!G || G.open || G.dead || G.win) return;
+  keys['Space'] = true;
+  document.getElementById('touch-atk').classList.add('pressing');
+}
+function touchAtkUp(e) {
+  if (e) e.preventDefault();
+  keys['Space'] = false;
+  document.getElementById('touch-atk').classList.remove('pressing');
+}
 
 function renderShop() {
   document.getElementById('sglbl').textContent = G.gems + '💎 gems';

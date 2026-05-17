@@ -157,7 +157,41 @@ canvas{display:block;position:absolute;top:0;left:0;}
   font-size:11px;
 }
 
-#shopbtn{position:absolute;bottom:6px;right:10px;z-index:6;}
+/* Touch buttons — hidden on desktop, shown on touch devices */
+@media (hover:hover) and (pointer:fine) {
+  #touch-atk, #touch-shop { display:none !important; }
+}
+#touch-atk, #touch-shop {
+  position:absolute;bottom:18px;z-index:10;
+  border:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;border-radius:50%;width:74px;height:74px;
+  font-size:26px;line-height:1;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;touch-action:none;
+  box-shadow:0 4px 18px rgba(0,0,0,0.6);
+  transition:transform .08s,filter .08s;
+}
+#touch-atk {
+  right:18px;
+  background:radial-gradient(circle at 40% 35%,#ff7033,#b02200);
+  border:3px solid #ff9966;
+  color:#fff;
+}
+#touch-atk:active, #touch-atk.pressing {
+  transform:scale(0.88);filter:brightness(1.3);
+}
+#touch-shop {
+  right:106px;
+  background:radial-gradient(circle at 40% 35%,#5560dd,#1a2288);
+  border:3px solid #8899ff;
+  color:#fff;
+}
+#touch-shop:active { transform:scale(0.88); }
+#touch-atk span, #touch-shop span {
+  font-size:9px;font-weight:bold;letter-spacing:1px;color:#fff;opacity:0.9;
+  font-family:'Courier New',monospace;
+}
 #lvlmap{
   position:absolute;bottom:6px;left:10px;
   color:#b880f0;font-size:10px;z-index:6;

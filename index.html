@@ -138,8 +138,9 @@
   </div>
 
   <div id="banner"></div>
-  <div id="shopbtn"><button class="btn" onclick="openShop()" style="font-size:10px;padding:4px 12px">🛒 SHOP (50 pets!)</button></div>
   <div id="lvlmap"></div>
+  <button id="touch-atk" ontouchstart="touchAtkDown(event)" ontouchend="touchAtkUp(event)" onmousedown="touchAtkDown(event)" onmouseup="touchAtkUp(event)">⚔️<span>ATTACK</span></button>
+  <button id="touch-shop" onclick="openShop()">🛒<span>SHOP</span></button>
 
   <div id="ov">
     <div class="otitle">🛒 Shop — <span id="sglbl">0💎</span></div>
