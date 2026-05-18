@@ -548,6 +548,43 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   .weapon-cat-grid { grid-template-columns:1fr 1fr; }
 }
 
+/* ── Habitats screen ─────────────────────────────────────────────────────── */
+.habitats-grid{width:100%;display:flex;flex-direction:column;gap:14px;margin-top:4px;}
+.hab-card{
+  border:2px solid #4020a0;border-radius:14px;overflow:hidden;
+  box-shadow:0 2px 18px rgba(0,0,0,0.4);
+}
+.hab-card-header{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  flex-wrap:wrap;
+}
+.hab-card-icon{font-size:28px;flex-shrink:0;}
+.hab-card-title{font-size:15px;font-weight:bold;letter-spacing:.5px;}
+.hab-card-desc{font-size:11px;color:#9070b0;margin-top:2px;}
+.hab-card-count{font-size:18px;font-weight:bold;margin-left:auto;white-space:nowrap;}
+.hab-card-pets{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;}
+.hab-pet-chip{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 8px;border-radius:20px;border:1px solid;
+  transition:opacity .15s;
+}
+.hab-pet-has{border-color:#5030a0;background:rgba(60,20,120,0.6);}
+.hab-pet-no {border-color:#2a1a40;background:rgba(20,8,45,0.5);opacity:0.4;}
+.hab-chip-emoji{font-size:18px;line-height:1;}
+.hab-chip-name{font-size:11px;color:#d0b8f0;white-space:nowrap;}
+.hab-chip-count{font-size:11px;font-weight:bold;white-space:nowrap;}
+
+@media(max-width:700px){
+  .hab-card-header{gap:8px;padding:8px 10px;}
+  .hab-card-icon{font-size:22px;}
+  .hab-card-title{font-size:13px;}
+  .hab-card-count{font-size:15px;}
+  .hab-card-pets{gap:5px;padding:8px 10px;}
+  .hab-chip-emoji{font-size:15px;}
+  .hab-chip-name{font-size:10px;}
+}
+
 /* ── Servants ─────────────────────────────────────────────────────────────── */
 .servant-pending{text-align:center;color:#ffd700;font-size:13px;margin:6px 0;min-height:18px;}
 

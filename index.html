@@ -40,6 +40,11 @@
         <span class="hab-label">Weapons</span>
         <span class="hab-desc">Buy &amp; upgrade weapons<br><small>50 weapons to collect</small></span>
       </button>
+      <button class="hub-action-btn" onclick="showHabitats()">
+        <span class="hab-icon">🌍</span>
+        <span class="hab-label">Habitats</span>
+        <span class="hab-desc">Sea, Forest, Sky &amp; more<br><small>See your pets' homes</small></span>
+      </button>
       <button class="hub-action-btn" onclick="showServants()">
         <span class="hab-icon">🏰</span>
         <span class="hab-label">Servants</span>
@@ -56,6 +61,16 @@
         <span class="hab-desc">100 challenges, earn rubies<br><small>Track your progress</small></span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ── Habitats ─────────────────────────────────────────────── -->
+<div id="screen-habitats" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🌍 Habitats</div>
+    <div class="shop-rubies">Rubies: <span id="habitats-rubies">0 🔴</span></div>
+    <div id="habitats-grid" class="habitats-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
   </div>
 </div>
 

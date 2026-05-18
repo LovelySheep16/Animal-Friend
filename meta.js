@@ -358,7 +358,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -414,6 +414,58 @@ function speciesCount(acc, petId) {
     });
     document.getElementById('awards-grid').innerHTML = html;
     showScreen('screen-awards');
+  };
+
+  // ── Habitats ──────────────────────────────────────────────────────────────
+  var HAB_THEMES = [
+    { bg:'linear-gradient(160deg,#001428 0%,#002a55 60%,#001428 100%)', border:'#0077cc', wave:'rgba(0,120,220,0.15)', icon:'🌊', name:'Sea Habitat',     desc:'Ocean, rivers & water creatures' },
+    { bg:'linear-gradient(160deg,#061202 0%,#0e2e08 60%,#061202 100%)', border:'#2d8a2d', wave:'rgba(40,160,40,0.12)',  icon:'🌿', name:'Forest Habitat',  desc:'Woodland, jungle & meadow animals' },
+    { bg:'linear-gradient(160deg,#1a0c00 0%,#361800 60%,#1a0c00 100%)', border:'#cc6600', wave:'rgba(200,100,0,0.12)', icon:'🦁', name:'Savanna Habitat', desc:'Desert, plains & savanna beasts' },
+    { bg:'linear-gradient(160deg,#010818 0%,#020f28 60%,#010818 100%)', border:'#3366cc', wave:'rgba(50,100,220,0.12)',icon:'☁️', name:'Sky Habitat',     desc:'Flying & aerial creatures' },
+    { bg:'linear-gradient(160deg,#0a0018 0%,#160028 60%,#0a0018 100%)', border:'#9933cc', wave:'rgba(150,50,220,0.12)',icon:'✨', name:'Mythical Habitat','desc':'Legendary & magical beings' },
+  ];
+
+  window.showHabitats = function() {
+    var acc = ensureItems(getAccount());
+    document.getElementById('habitats-rubies').textContent = acc.rubies + ' 🔴';
+
+    var pets = window.PETS || [];
+    var petMap = {};
+    pets.forEach(function(p) { petMap[p.id] = p; });
+
+    var owned = {};
+    (acc.homePets || []).forEach(function(p) { owned[p.id] = (owned[p.id] || 0) + 1; });
+
+    var html = '';
+    for (var i = 0; i < HABITATS.length - 1; i++) {
+      var h = HABITATS[i];
+      var th = HAB_THEMES[i] || HAB_THEMES[0];
+      var ownedCount = h.ids.filter(function(id) { return owned[id]; }).length;
+
+      html += '<div class="hab-card" style="background:' + th.bg + ';border-color:' + th.border + '">';
+      html += '<div class="hab-card-header" style="border-bottom-color:' + th.border + '44">';
+      html += '<span class="hab-card-icon">' + th.icon + '</span>';
+      html += '<div><div class="hab-card-title" style="color:' + th.border + '">' + th.name + '</div>';
+      html += '<div class="hab-card-desc">' + th.desc + '</div></div>';
+      html += '<div class="hab-card-count" style="color:' + th.border + '">' + ownedCount + '<span style="color:#605080">/' + h.ids.length + '</span></div>';
+      html += '</div>';
+      html += '<div class="hab-card-pets">';
+      h.ids.forEach(function(id) {
+        var p = petMap[id];
+        if (!p) return;
+        var cnt = owned[id] || 0;
+        var has = cnt > 0;
+        html += '<div class="hab-pet-chip' + (has ? ' hab-pet-has' : ' hab-pet-no') + '" style="' + (has ? 'border-color:' + th.border + '88' : '') + '">';
+        html += '<span class="hab-chip-emoji">' + p.e + '</span>';
+        html += '<span class="hab-chip-name">' + p.n + '</span>';
+        if (has) html += '<span class="hab-chip-count" style="color:' + th.border + '">×' + cnt + '</span>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    document.getElementById('habitats-grid').innerHTML = html;
+    showScreen('screen-habitats');
   };
 
   // ── Hub ───────────────────────────────────────────────────────────────────
