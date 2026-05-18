@@ -327,14 +327,13 @@ function petRole(pt) {
 }
 
 var keys = {};
-var _isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
 window.addEventListener('keydown', function(e) {
   var tag = e.target && e.target.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
   keys[e.code] = true;
-  if (e.code === 'KeyE' && G && !G.dead && !G.win) {
-    if (G.open) closeShop(); else openShop();
+  if ((e.code === 'KeyS' || e.code === 'KeyE') && !e.repeat && G && !G.dead && !G.win) {
+    if (G.open) closeShop(); else { keys['KeyS'] = false; openShop(); }
   }
   e.preventDefault();
 });
@@ -1333,7 +1332,7 @@ Game.prototype.draw = function() {
   if (this.help && Date.now() - this.t0 < 9000) {
     ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(canvas.width/2-170, canvas.height-66, 340, 50);
     ctx.fillStyle = '#d8c0f8'; ctx.font = '14px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText('Arrow keys / WASD = move  ·  SPACE = attack  ·  E = shop', canvas.width/2, canvas.height-49);
+    ctx.fillText('Arrow keys / WASD = move  ·  SPACE = attack  ·  S = shop', canvas.width/2, canvas.height-49);
     ctx.fillText('Kill 💀 guardian → ⚔️ attack 📦 chest to open it & get a wild pet!', canvas.width/2, canvas.height-30);
   } else if (Date.now() - this.t0 >= 9000) {
     this.help = false;
@@ -1405,19 +1404,15 @@ function openShop()  {
   if (!G || G.dead || G.win) return;
   G.open = true; renderShop();
   document.getElementById('ov').style.display = 'flex';
-  if (_isTouchDevice) {
-    document.getElementById('touch-atk').style.display = 'none';
-    document.getElementById('touch-shop').style.display = 'none';
-  }
+  document.getElementById('touch-atk').style.display = 'none';
+  document.getElementById('touch-shop').style.display = 'none';
 }
 function closeShop() {
   if (!G) return;
   G.open = false;
   document.getElementById('ov').style.display = 'none';
-  if (_isTouchDevice) {
-    document.getElementById('touch-atk').style.display = '';
-    document.getElementById('touch-shop').style.display = '';
-  }
+  document.getElementById('touch-atk').style.display = '';
+  document.getElementById('touch-shop').style.display = '';
 }
 
 function touchAtkDown(e) {
