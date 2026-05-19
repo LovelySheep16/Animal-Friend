@@ -672,6 +672,41 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 .hub-boss-btn .hab-label{color:#88ddff!important;}
 .hub-boss-btn .hab-desc{color:#4499aa!important;}
 
+/* ── Emerald / Exchange button ────────────────────────────── */
+.hub-emerald-btn{border-color:#00cc66!important;background:rgba(0,40,20,0.9)!important;}
+.hub-emerald-btn:hover{border-color:#00ff88!important;background:rgba(0,60,30,0.9)!important;box-shadow:0 4px 20px rgba(0,220,120,0.45)!important;}
+.hub-emerald-btn .hab-label{color:#88ffcc!important;}
+.hub-emerald-btn .hab-desc{color:#44aa77!important;}
+
+/* ── Exchange screen ──────────────────────────────────────── */
+.exchange-grid{display:flex;flex-direction:column;gap:8px;width:100%;}
+.exchange-deal{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(0,60,30,0.7);border:1px solid #00aa55;border-radius:10px;
+  padding:10px 14px;cursor:pointer;transition:background .1s;
+}
+.exchange-deal:hover{background:rgba(0,90,45,0.9);}
+.exchange-deal.cant-buy{opacity:0.4;cursor:not-allowed;}
+.exchange-label{color:#aaffcc;font-size:13px;}
+.exchange-cost{color:#00ff88;font-size:12px;font-weight:bold;}
+
+/* ── Chests screen ────────────────────────────────────────── */
+.chests-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+.chest-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:rgba(10,30,20,0.85);border:2px solid #006633;border-radius:12px;
+  padding:10px 8px;
+}
+.chest-icon{font-size:32px;}
+.chest-name{color:#ccffee;font-size:12px;font-weight:bold;}
+.chest-rarity{font-size:10px;font-weight:bold;}
+.chest-desc{color:#668877;font-size:9px;text-align:center;}
+.chest-cost{color:#00ffaa;font-size:12px;font-weight:bold;}
+
+/* ── Food section in in-game shop ────────────────────────── */
+.food-grid{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:4px 0;}
+.food-item{background:rgba(50,25,0,0.85);border:1px solid #aa7700;}
+
 /* ── Result awards ────────────────────────────────────────── */
 .result-awards{margin-top:10px;text-align:center;}
 .result-award{

@@ -65,6 +65,16 @@
         <span class="hab-label">Characters</span>
         <span class="hab-desc">100 fighters to collect<br><small>Each has a unique blast!</small></span>
       </button>
+      <button class="hub-action-btn hub-emerald-btn" onclick="showExchange()">
+        <span class="hab-icon">💚</span>
+        <span class="hab-label">Exchange</span>
+        <span class="hab-desc">70 🔴 = 1 💚 emerald<br><small>Spend emeralds on chests</small></span>
+      </button>
+      <button class="hub-action-btn hub-emerald-btn" onclick="showChests()">
+        <span class="hab-icon">📦</span>
+        <span class="hab-label">Chests</span>
+        <span class="hab-desc">Open for exclusive loot<br><small>10 tiers · costs emeralds</small></span>
+      </button>
       <button class="hub-action-btn hub-boss-btn" onclick="playBossRun()">
         <span class="hab-icon">🌠</span>
         <span class="hab-label">Boss Fight</span>
@@ -150,6 +160,28 @@
   </div>
 </div>
 
+<!-- ── Exchange ──────────────────────────────────────────── -->
+<div id="screen-exchange" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">💚 Emerald Exchange</div>
+    <div class="shop-rubies">Rubies: <span id="exchange-rubies">0 🔴</span> &nbsp;·&nbsp; Emeralds: <span id="exchange-emeralds">0 💚</span></div>
+    <div style="color:#50d890;font-size:11px;text-align:center;margin-bottom:6px">Spend emeralds on chests for exclusive weapons, characters & pets!</div>
+    <div id="exchange-grid" class="exchange-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Chests ─────────────────────────────────────────────── -->
+<div id="screen-chests" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">📦 Chests</div>
+    <div class="shop-rubies">Emeralds: <span id="chests-emeralds">0 💚</span></div>
+    <div style="color:#aaffcc;font-size:11px;text-align:center;margin-bottom:6px">Each chest gives 1 exclusive item: weapon, character, or pet not found anywhere else!</div>
+    <div id="chests-grid" class="chests-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
 <!-- ── Run Result ────────────────────────────────────────── -->
 <div id="screen-result" class="meta-screen" style="display:none">
   <div class="meta-card">
@@ -187,6 +219,8 @@
     <div class="otitle">🛒 Shop — <span id="sglbl">0💎</span></div>
     <div class="scat upgrade">⚡ Upgrades</div>
     <div id="upgrid"></div>
+    <div class="scat" style="background:#2a1a00;color:#ffcc44;margin-top:10px">🍎 Food</div>
+    <div id="foodgrid" class="food-grid"></div>
     <div class="scat attacker" style="margin-top:10px">🐾 Pets</div>
     <div id="sgrid"></div>
     <button class="btn" style="margin:14px auto;display:block" onclick="closeShop()">▶ Back to Game</button>

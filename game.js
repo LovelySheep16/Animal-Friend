@@ -306,6 +306,17 @@ var WEAPONS = [
 ];
 window.WEAPONS = WEAPONS;
 
+var FOOD_ITEMS = [
+  {id:'apple',   e:'🍎', n:'Apple',        cost:50,  heal:30,   atk:0,  desc:'Restore 30 HP'},
+  {id:'bread',   e:'🍞', n:'Bread',        cost:90,  heal:70,   atk:0,  desc:'Restore 70 HP'},
+  {id:'soup',    e:'🍲', n:'Hearty Soup',  cost:150, heal:150,  atk:0,  desc:'Restore 150 HP'},
+  {id:'steak',   e:'🥩', n:'Power Steak',  cost:200, heal:0,    atk:8,  desc:'+8 attack this run'},
+  {id:'potion',  e:'🧪', n:'Atk Potion',   cost:300, heal:0,    atk:18, desc:'+18 attack this run'},
+  {id:'feast',   e:'🍖', n:'Royal Feast',  cost:500, heal:9999, atk:12, desc:'Full heal + +12 attack'},
+  {id:'warbrew', e:'⚗️', n:'War Brew',     cost:750, heal:9999, atk:30, desc:'Full heal + +30 attack'},
+];
+window.FOOD_ITEMS = FOOD_ITEMS;
+
 function lvlDef(lv) {
   var zoneLv = lv % 50;
   var zone  = ZONES[zoneLv];
@@ -392,6 +403,8 @@ function Game() {
   this.charDef = null; this.blastCharge = 0; this.blastReady = false; this.digRubies = 0;
   // Boss run
   this.isBossRun = false; this.bossLasers = []; this.bossKills = 0; this.bossPetDmg = 10;
+  // Food
+  this.foodAtk = 0;
   // Debuffs (applied by blasts)
   this.slowUntil = 0; this.weakenUntil = 0;
   this.build(); this.showBanner();
@@ -1121,7 +1134,7 @@ Game.prototype.doAtk = function() {
   var p     = this.p;
   var wdmg  = (this.weaponDmg  || 20) * (this.weaponLevel || 1);
   var range = this.weaponRange || 68;
-  var dmg   = wdmg + this.lv + 8 * this.upg.attack + (this.charDef ? this.charDef.atkBonus : 0);
+  var dmg   = wdmg + this.lv + 8 * this.upg.attack + (this.charDef ? this.charDef.atkBonus : 0) + (this.foodAtk || 0);
   var self  = this;
   var atkColor = this.weaponColor || '#fff';
   var hitCount = 0;
@@ -1702,6 +1715,39 @@ function renderShop() {
     html += '</div>';
   });
   document.getElementById('sgrid').innerHTML = html;
+
+  // Food section
+  var foodHtml = '';
+  FOOD_ITEMS.forEach(function(f) {
+    var ca = G.gems < f.cost;
+    foodHtml += '<div class="sc food-item' + (ca ? ' ca' : '') + '" onclick="' + (ca ? '' : 'buyFood(\'' + f.id + '\')') + '">';
+    foodHtml += '<div class="pe">' + f.e + '</div>';
+    foodHtml += '<div class="pn">' + f.n + '</div>';
+    foodHtml += '<div class="pd">' + f.desc + '</div>';
+    foodHtml += '<div class="pc">💎 ' + f.cost + '</div>';
+    foodHtml += '</div>';
+  });
+  document.getElementById('foodgrid').innerHTML = foodHtml;
+}
+
+function buyFood(id) {
+  var f = null;
+  for (var i = 0; i < FOOD_ITEMS.length; i++) { if (FOOD_ITEMS[i].id === id) { f = FOOD_ITEMS[i]; break; } }
+  if (!f || G.gems < f.cost) return;
+  G.gems -= f.cost;
+  var p = G.p;
+  if (f.heal > 0) {
+    var healed = Math.min(p.mhp - p.hp, f.heal);
+    p.hp = Math.min(p.mhp, p.hp + f.heal);
+    G.fl(p.x, p.y - 20, '+' + healed + '❤️', '#44ff88');
+    G.burst(p.x, p.y, '#44ff88', 10);
+  }
+  if (f.atk > 0) {
+    G.foodAtk = (G.foodAtk || 0) + f.atk;
+    G.fl(p.x, p.y - 36, '+' + f.atk + '⚔️ atk!', '#ffdd44');
+  }
+  sndBuyPet();
+  renderShop();
 }
 
 function buyUpgrade(id) {
@@ -1811,7 +1857,7 @@ window.META_startGame = function (config, homePets) {
     for (var i = 0; i < (config.potion || 0); i++) { G.p.mhp += 30; G.p.hp = Math.min(G.p.hp + 30, G.p.mhp); }
     if (config.weaponDmg)   { G.weaponDmg = config.weaponDmg; G.weaponRange = config.weaponRange; G.weaponLevel = config.weaponLevel || 1; G.weaponColor = config.weaponColor || '#fff'; }
     if (config.character) {
-      var chars = window.CHARACTERS || [];
+      var chars = (window.CHARACTERS || []).concat(window.CHEST_CHARS || []);
       for (var ci = 0; ci < chars.length; ci++) { if (chars[ci].id === config.character) { G.charDef = chars[ci]; break; } }
     }
   }

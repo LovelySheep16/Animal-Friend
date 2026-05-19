@@ -187,6 +187,82 @@
   ];
   window.CHARACTERS = CHARACTERS;
 
+  // ── Chest-exclusive weapons ────────────────────────────────────────────────
+  var CHEST_WEAPONS = [
+    {id:'cw_rustblade',   e:'🗡️', n:'Rust Blade',     cat:'Close',    dmg:32,  range:74,  tier:1},
+    {id:'cw_stonearrow',  e:'🪨', n:'Stone Arrow',     cat:'Far',      dmg:25,  range:165, tier:1},
+    {id:'cw_silveredge',  e:'⚔️', n:'Silver Edge',     cat:'Close',    dmg:52,  range:80,  tier:2},
+    {id:'cw_windbow',     e:'💨', n:'Wind Bow',        cat:'Very Far', dmg:44,  range:235, tier:2},
+    {id:'cw_mithril',     e:'💠', n:'Mithril Sword',   cat:'Medium',   dmg:75,  range:125, tier:3},
+    {id:'cw_stormstaff',  e:'⛈️', n:'Storm Staff',     cat:'Magic',    dmg:68,  range:185, tier:3},
+    {id:'cw_dragonblade', e:'🐉', n:'Dragon Blade',    cat:'Close',    dmg:110, range:88,  tier:4},
+    {id:'cw_voidbow',     e:'🌑', n:'Void Bow',        cat:'Very Far', dmg:95,  range:285, tier:4},
+    {id:'cw_cosmicblade', e:'🌌', n:'Cosmic Blade',    cat:'Close',    dmg:165, range:92,  tier:5},
+    {id:'cw_starstrike',  e:'⭐', n:'Star Strike',     cat:'Magic',    dmg:145, range:210, tier:5},
+    {id:'cw_universebow', e:'🌠', n:'Universe Bow',    cat:'Very Far', dmg:135, range:330, tier:5},
+    {id:'cw_eternity',    e:'✨', n:'Eternity',        cat:'Magic',    dmg:200, range:225, tier:5},
+  ];
+  window.CHEST_WEAPONS = CHEST_WEAPONS;
+
+  // ── Chest-exclusive characters ─────────────────────────────────────────────
+  var CHEST_CHARS = [
+    {id:'cc_goblin',   e:'👺', n:'Goblin Scout',  cat:'📦 Chest',  cost:0, atkBonus:18,  blast:'damage', blastPow:1.5,  tier:1},
+    {id:'cc_sprite',   e:'🧚', n:'Fairy Sprite',  cat:'📦 Chest',  cost:0, atkBonus:14,  blast:'heal',   blastPow:1.5,  tier:1},
+    {id:'cc_druid',    e:'🌿', n:'Ancient Druid', cat:'📦 Chest',  cost:0, atkBonus:35,  blast:'heal',   blastPow:2.0,  tier:2},
+    {id:'cc_vampire',  e:'🧛', n:'Vampire Lord',  cat:'📦 Chest',  cost:0, atkBonus:42,  blast:'damage', blastPow:2.2,  tier:2},
+    {id:'cc_phoenix',  e:'🔥', n:'Phoenix Mage',  cat:'📦 Chest',  cost:0, atkBonus:70,  blast:'damage', blastPow:3.0,  tier:3},
+    {id:'cc_lich',     e:'💀', n:'Lich King',     cat:'📦 Chest',  cost:0, atkBonus:65,  blast:'weaken', blastPow:3.5,  tier:3},
+    {id:'cc_demigod',  e:'⚡', n:'Demi-God',      cat:'📦 Chest',  cost:0, atkBonus:105, blast:'damage', blastPow:4.5,  tier:4},
+    {id:'cc_angel',    e:'😇', n:'Seraph Angel',  cat:'📦 Chest',  cost:0, atkBonus:98,  blast:'heal',   blastPow:4.5,  tier:4},
+    {id:'cc_titan',    e:'🗿', n:'Ancient Titan', cat:'📦 Chest',  cost:0, atkBonus:155, blast:'damage', blastPow:6.0,  tier:5},
+    {id:'cc_deity',    e:'🌟', n:'Deity',         cat:'📦 Chest',  cost:0, atkBonus:145, blast:'dig',    blastPow:6.0,  tier:5},
+    {id:'cc_cosmos',   e:'🌌', n:'Cosmic God',    cat:'📦 Chest',  cost:0, atkBonus:220, blast:'damage', blastPow:8.0,  tier:5},
+    {id:'cc_voidlord', e:'🌀', n:'Void Lord',     cat:'📦 Chest',  cost:0, atkBonus:200, blast:'weaken', blastPow:7.0,  tier:5},
+  ];
+  window.CHEST_CHARS = CHEST_CHARS;
+
+  // ── Chest-exclusive pets ───────────────────────────────────────────────────
+  var CHEST_PETS = [
+    {id:'cp_butterfly',e:'🦋',n:'Butterfly',    d:'Heals 18hp/3s',           cost:200,  cat:'📦 Chest Pets',heal:18, hi:3000,atk:0,  ar:0,    sc:0,    tier:1},
+    {id:'cp_firefly',  e:'🌟',n:'Firefly',      d:'15dmg very fast',         cost:180,  cat:'📦 Chest Pets',heal:0,  hi:0,   atk:15, ar:700,  sc:0,    tier:1},
+    {id:'cp_chameleon',e:'🦎',n:'Chameleon',    d:'Blocks 30% + 18dmg',      cost:280,  cat:'📦 Chest Pets',heal:0,  hi:0,   atk:18, ar:1400, sc:0.30, tier:2},
+    {id:'cp_stingray', e:'🐡',n:'Stingray',     d:'Heals 22/2s + 22dmg',     cost:320,  cat:'📦 Chest Pets',heal:22, hi:2000,atk:22, ar:1000, sc:0,    tier:2},
+    {id:'cp_griffin',  e:'🦅',n:'Griffin',      d:'60dmg',                   cost:480,  cat:'📦 Chest Pets',heal:0,  hi:0,   atk:60, ar:1100, sc:0,    tier:3},
+    {id:'cp_mermaid',  e:'🧜',n:'Mermaid',      d:'Heals 40/1.5s',           cost:450,  cat:'📦 Chest Pets',heal:40, hi:1500,atk:0,  ar:0,    sc:0,    tier:3},
+    {id:'cp_wyrm',     e:'🐲',n:'Wyrm',         d:'75dmg + blocks 28%',      cost:700,  cat:'📦 Chest Pets',heal:0,  hi:0,   atk:75, ar:900,  sc:0.28, tier:4},
+    {id:'cp_valkyrie', e:'⚔️',n:'Valkyrie',     d:'Heals 45/2s + 50dmg',     cost:780,  cat:'📦 Chest Pets',heal:45, hi:2000,atk:50, ar:1100, sc:0,    tier:4},
+    {id:'cp_leviathan',e:'🌊',n:'Leviathan',    d:'110dmg',                  cost:1100, cat:'📦 Chest Pets',heal:0,  hi:0,   atk:110,ar:1000, sc:0,    tier:5},
+    {id:'cp_seraph',   e:'✨',n:'Seraph Pet',   d:'Heals 65/1.5s',           cost:1000, cat:'📦 Chest Pets',heal:65, hi:1500,atk:0,  ar:0,    sc:0,    tier:5},
+    {id:'cp_behemoth', e:'🦣',n:'Behemoth',     d:'Blocks 78% + 85dmg',      cost:1300, cat:'📦 Chest Pets',heal:0,  hi:0,   atk:85, ar:1800, sc:0.78, tier:5},
+    {id:'cp_stargod',  e:'🌠',n:'Star Guardian',d:'Heals 55/2s + 65dmg + blocks 50%',cost:1600,cat:'📦 Chest Pets',heal:55,hi:2000,atk:65,ar:1000,sc:0.50,tier:5},
+  ];
+  window.CHEST_PETS = CHEST_PETS;
+
+  // ── 10 Chest tiers ────────────────────────────────────────────────────────
+  var CHESTS = [
+    {id:'wood',    e:'📦', n:'Wood Chest',    cost:2,   col:'#8B4513', rarity:'Common',
+     weapons:['cw_rustblade','cw_stonearrow'], chars:['cc_goblin','cc_sprite'], pets:['cp_butterfly','cp_firefly']},
+    {id:'stone',   e:'🪨', n:'Stone Chest',   cost:5,   col:'#888',    rarity:'Common+',
+     weapons:['cw_rustblade','cw_stonearrow','cw_silveredge'], chars:['cc_goblin','cc_sprite','cc_druid'], pets:['cp_butterfly','cp_firefly','cp_chameleon']},
+    {id:'bronze',  e:'🥉', n:'Bronze Chest',  cost:10,  col:'#CD7F32', rarity:'Uncommon',
+     weapons:['cw_silveredge','cw_windbow'], chars:['cc_druid','cc_vampire'], pets:['cp_chameleon','cp_stingray']},
+    {id:'iron',    e:'⚙️', n:'Iron Chest',    cost:18,  col:'#708090', rarity:'Uncommon+',
+     weapons:['cw_silveredge','cw_windbow','cw_mithril'], chars:['cc_druid','cc_vampire','cc_phoenix'], pets:['cp_chameleon','cp_stingray','cp_griffin']},
+    {id:'silver',  e:'🥈', n:'Silver Chest',  cost:30,  col:'#C0C0C0', rarity:'Rare',
+     weapons:['cw_mithril','cw_stormstaff'], chars:['cc_phoenix','cc_lich'], pets:['cp_griffin','cp_mermaid']},
+    {id:'gold',    e:'🥇', n:'Gold Chest',    cost:50,  col:'#FFD700', rarity:'Rare+',
+     weapons:['cw_mithril','cw_stormstaff','cw_dragonblade'], chars:['cc_phoenix','cc_lich','cc_demigod'], pets:['cp_griffin','cp_mermaid','cp_wyrm']},
+    {id:'crystal', e:'💎', n:'Crystal Chest', cost:80,  col:'#88EEFF', rarity:'Epic',
+     weapons:['cw_dragonblade','cw_voidbow'], chars:['cc_demigod','cc_angel'], pets:['cp_wyrm','cp_valkyrie']},
+    {id:'diamond', e:'💠', n:'Diamond Chest', cost:120, col:'#B9F2FF', rarity:'Epic+',
+     weapons:['cw_dragonblade','cw_voidbow','cw_cosmicblade'], chars:['cc_demigod','cc_angel','cc_titan'], pets:['cp_wyrm','cp_valkyrie','cp_leviathan']},
+    {id:'dragon',  e:'🐉', n:'Dragon Chest',  cost:200, col:'#FF6600', rarity:'Legendary',
+     weapons:['cw_cosmicblade','cw_starstrike','cw_universebow'], chars:['cc_titan','cc_deity','cc_cosmos'], pets:['cp_leviathan','cp_seraph','cp_behemoth']},
+    {id:'cosmic',  e:'🌌', n:'Cosmic Chest',  cost:350, col:'#9900FF', rarity:'Legendary+',
+     weapons:['cw_cosmicblade','cw_starstrike','cw_universebow','cw_eternity'], chars:['cc_titan','cc_deity','cc_cosmos','cc_voidlord'], pets:['cp_leviathan','cp_seraph','cp_behemoth','cp_stargod']},
+  ];
+  window.CHESTS = CHESTS;
+
   var DRAGON_TYPES = {
     aquarium: { e:'💧', n:'Sea Dragon',     rubyPerDay:3  },
     forest:   { e:'🍃', n:'Forest Dragon',  rubyPerDay:5  },
@@ -435,6 +511,10 @@
     if (!acc.activeCharacter)   acc.activeCharacter   = 'brownbear';
     if (!acc.lastBossRun)       acc.lastBossRun       = 0;
     if (!acc.bossKills)         acc.bossKills         = 0;
+    if (!acc.emeralds)          acc.emeralds          = 0;
+    if (!acc.chestWeapons)      acc.chestWeapons      = {};
+    if (!acc.chestChars)        acc.chestChars        = [];
+    if (!acc.chestPets)         acc.chestPets         = {};
     if (!acc.stats) acc.stats = {
       runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
       totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
@@ -467,17 +547,33 @@ function speciesCount(acc, petId) {
 
   function getWeaponConfig(acc) {
     var id = acc.activeWeapon;
-    if (!id || !acc.weapons[id]) return {};
-    var weapons = window.WEAPONS || [];
-    var w = null;
-    for (var i = 0; i < weapons.length; i++) { if (weapons[i].id === id) { w = weapons[i]; break; } }
-    if (!w) return {};
+    if (!id) return {};
     var COLORS = { Close:'#ff6644', Medium:'#ffd700', Far:'#44ddff', 'Very Far':'#88ff88', Magic:'#dd88ff' };
-    return { weaponDmg: w.dmg, weaponRange: w.range, weaponLevel: acc.weapons[id], weaponColor: COLORS[w.cat] || '#fff' };
+    // Check regular weapons
+    if (acc.weapons && acc.weapons[id]) {
+      var weapons = window.WEAPONS || [];
+      for (var i = 0; i < weapons.length; i++) {
+        if (weapons[i].id === id) {
+          var w = weapons[i];
+          return { weaponDmg: w.dmg, weaponRange: w.range, weaponLevel: acc.weapons[id], weaponColor: COLORS[w.cat] || '#fff' };
+        }
+      }
+    }
+    // Check chest weapons
+    if (acc.chestWeapons && acc.chestWeapons[id]) {
+      var cws = window.CHEST_WEAPONS || [];
+      for (var j = 0; j < cws.length; j++) {
+        if (cws[j].id === id) {
+          var cw = cws[j];
+          return { weaponDmg: cw.dmg, weaponRange: cw.range, weaponLevel: 1, weaponColor: COLORS[cw.cat] || '#fff' };
+        }
+      }
+    }
+    return {};
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -655,6 +751,25 @@ function speciesCount(acc, petId) {
       });
       html += '</div>';
     });
+    // Chest chars section
+    var chestChars = window.CHEST_CHARS || [];
+    var ownedChest = acc.chestChars || [];
+    if (ownedChest.length > 0) {
+      html += '<div class="weapon-cat-title" style="color:#00eeaa">📦 Chest Characters</div><div class="weapon-cat-grid">';
+      chestChars.forEach(function(c) {
+        if (ownedChest.indexOf(c.id) < 0) return;
+        var isActive = active === c.id;
+        var sid = c.id.replace(/'/g, "\\'");
+        html += '<div class="weapon-item char-item' + (isActive ? ' weapon-active' : '') + '">';
+        html += '<div class="weapon-emoji">' + c.e + '</div>';
+        html += '<div class="weapon-name">' + c.n + '</div>';
+        html += '<div class="weapon-stats">+' + c.atkBonus + ' atk &nbsp; ' + BLAST_LABELS[c.blast] + '</div>';
+        html += '<div class="weapon-level" style="color:#00eeaa">📦 Chest</div>';
+        html += '<div class="weapon-btns"><button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipCharacter(\'' + sid + '\')">' + (isActive ? '✓ Playing' : 'Play') + '</button></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
     document.getElementById('char-grid').innerHTML = html;
     showScreen('screen-characters');
   };
@@ -676,10 +791,118 @@ function speciesCount(acc, petId) {
 
   window.equipCharacter = function(id) {
     var acc = ensureItems(getAccount());
-    if ((acc.characters || []).indexOf(id) < 0) return;
+    var inNormal = (acc.characters || []).indexOf(id) >= 0;
+    var inChest  = (acc.chestChars  || []).indexOf(id) >= 0;
+    if (!inNormal && !inChest) return;
     acc.activeCharacter = id;
     saveAccount(acc);
     window.showCharacters();
+  };
+
+  // ── Exchange (rubies → emeralds) ──────────────────────────
+  var EMERALD_DEALS = [
+    {rubies:70,   emeralds:1,  label:'70 🔴 → 1 💚'},
+    {rubies:350,  emeralds:6,  label:'350 🔴 → 6 💚  (+1 bonus)'},
+    {rubies:700,  emeralds:14, label:'700 🔴 → 14 💚 (+4 bonus)'},
+    {rubies:3500, emeralds:80, label:'3500 🔴 → 80 💚 (+30 bonus)'},
+  ];
+  window.showExchange = function() {
+    var acc = ensureItems(getAccount());
+    document.getElementById('exchange-rubies').textContent  = acc.rubies + ' 🔴';
+    document.getElementById('exchange-emeralds').textContent= acc.emeralds + ' 💚';
+    var html = '';
+    EMERALD_DEALS.forEach(function(d, i) {
+      var can = acc.rubies >= d.rubies;
+      html += '<div class="exchange-deal' + (can ? '' : ' cant-buy') + '" onclick="' + (can ? 'buyEmeraldDeal(' + i + ')' : '') + '">';
+      html += '<span class="exchange-label">' + d.label + '</span>';
+      html += '<span class="exchange-cost">' + (can ? 'Buy' : 'Not enough 🔴') + '</span>';
+      html += '</div>';
+    });
+    document.getElementById('exchange-grid').innerHTML = html;
+    showScreen('screen-exchange');
+  };
+  window.buyEmeraldDeal = function(i) {
+    var acc = ensureItems(getAccount());
+    var d = EMERALD_DEALS[i];
+    if (!d || acc.rubies < d.rubies) return;
+    acc.rubies -= d.rubies;
+    acc.emeralds = (acc.emeralds || 0) + d.emeralds;
+    saveAccount(acc);
+    window.showExchange();
+  };
+
+  // ── Chest Shop ────────────────────────────────────────────
+  window.showChests = function() {
+    var acc = ensureItems(getAccount());
+    document.getElementById('chests-emeralds').textContent = acc.emeralds + ' 💚';
+    var html = '';
+    CHESTS.forEach(function(ch) {
+      var can = acc.emeralds >= ch.cost;
+      html += '<div class="chest-item">';
+      html += '<div class="chest-icon" style="color:' + ch.col + '">' + ch.e + '</div>';
+      html += '<div class="chest-name">' + ch.n + '</div>';
+      html += '<div class="chest-rarity" style="color:' + ch.col + '">' + ch.rarity + '</div>';
+      html += '<div class="chest-desc">Weapon · Character · Pet (exclusive)</div>';
+      html += '<div class="chest-cost">' + ch.cost + ' 💚</div>';
+      html += '<button class="weapon-btn weapon-buy' + (can ? '' : ' cant-buy') + '"' +
+        (can ? ' onclick="openChest(\'' + ch.id + '\')"' : ' disabled') + '>' +
+        (can ? 'Open' : 'Need ' + ch.cost + ' 💚') + '</button>';
+      html += '</div>';
+    });
+    document.getElementById('chests-grid').innerHTML = html;
+    showScreen('screen-chests');
+  };
+  window.openChest = function(id) {
+    var acc = ensureItems(getAccount());
+    var ch = null;
+    for (var i = 0; i < CHESTS.length; i++) { if (CHESTS[i].id === id) { ch = CHESTS[i]; break; } }
+    if (!ch || acc.emeralds < ch.cost) return;
+    acc.emeralds -= ch.cost;
+    // pick type weighted: weapon 33%, char 33%, pet 34%
+    var roll = Math.random();
+    var won = null;
+    if (roll < 0.33) {
+      var pool = ch.weapons;
+      var avail = pool.filter(function(wid) { return !acc.chestWeapons[wid]; });
+      if (avail.length === 0) { acc.rubies += 150; won = {e:'🔴', n:'Duplicate! +150 🔴 compensation'}; }
+      else {
+        var wid = avail[Math.floor(Math.random() * avail.length)];
+        acc.chestWeapons[wid] = 1;
+        var wd = null; for (var i2=0; i2<CHEST_WEAPONS.length; i2++) if (CHEST_WEAPONS[i2].id===wid) { wd=CHEST_WEAPONS[i2]; break; }
+        won = {e: wd ? wd.e : '⚔️', n: (wd ? wd.n : wid) + ' (Chest Weapon)'};
+      }
+    } else if (roll < 0.66) {
+      var cpool = ch.chars;
+      var cavail = cpool.filter(function(cid) { return acc.chestChars.indexOf(cid) < 0; });
+      if (cavail.length === 0) { acc.rubies += 150; won = {e:'🔴', n:'Duplicate! +150 🔴 compensation'}; }
+      else {
+        var cid = cavail[Math.floor(Math.random() * cavail.length)];
+        acc.chestChars.push(cid);
+        var cd = null; for (var i3=0; i3<CHEST_CHARS.length; i3++) if (CHEST_CHARS[i3].id===cid) { cd=CHEST_CHARS[i3]; break; }
+        won = {e: cd ? cd.e : '🧙', n: (cd ? cd.n : cid) + ' (Chest Character)'};
+      }
+    } else {
+      var ppool = ch.pets;
+      var pavail = ppool.filter(function(pid) { return !acc.chestPets[pid]; });
+      if (pavail.length === 0) { acc.rubies += 150; won = {e:'🔴', n:'Duplicate! +150 🔴 compensation'}; }
+      else {
+        var pid = pavail[Math.floor(Math.random() * pavail.length)];
+        acc.chestPets[pid] = true;
+        var pd = null; for (var i4=0; i4<CHEST_PETS.length; i4++) if (CHEST_PETS[i4].id===pid) { pd=CHEST_PETS[i4]; break; }
+        if (pd) {
+          var inst = {}; for (var k in pd) inst[k] = pd[k];
+          inst.uid = pid + '_chest_' + Date.now();
+          inst.mhp = Math.max(50, Math.round(40 + (pd.cost||0) * 0.30));
+          inst.hp = inst.mhp; inst.dead = false;
+          acc.homePets.push(inst);
+        }
+        won = {e: pd ? pd.e : '🐾', n: (pd ? pd.n : pid) + ' (Chest Pet — added to Home Pets!)'};
+      }
+    }
+    checkAwards(acc);
+    saveAccount(acc);
+    alert('📦 ' + ch.n + ' opened!\n\n' + won.e + ' ' + won.n);
+    window.showChests();
   };
 
   // ── Boss Run ──────────────────────────────────────────────
@@ -695,9 +918,9 @@ function speciesCount(acc, petId) {
     saveAccount(acc);
     showScreen('game');
     var charDef = null;
-    var chars = window.CHARACTERS || [];
     var cid = acc.activeCharacter || 'brownbear';
-    for (var i = 0; i < chars.length; i++) { if (chars[i].id === cid) { charDef = chars[i]; break; } }
+    var allChars = (window.CHARACTERS || []).concat(window.CHEST_CHARS || []);
+    for (var i = 0; i < allChars.length; i++) { if (allChars[i].id === cid) { charDef = allChars[i]; break; } }
     if (window.META_startBossGame) window.META_startBossGame(acc.homePets || [], charDef, acc.bossKills || 0);
   };
 
@@ -1110,6 +1333,26 @@ function speciesCount(acc, petId) {
       });
       html += '</div>';
     });
+    // Chest weapons section
+    var cws = window.CHEST_WEAPONS || [];
+    var ownedCW = Object.keys(acc.chestWeapons || {});
+    if (ownedCW.length > 0) {
+      html += '<div class="weapon-cat-title" style="color:#00eeaa">📦 Chest Weapons</div><div class="weapon-cat-grid">';
+      cws.forEach(function(cw) {
+        if (!acc.chestWeapons[cw.id]) return;
+        var isActive = activeId === cw.id;
+        var sid = cw.id.replace(/'/g, "\\'");
+        var COLORS2 = { Close:'#ff6644', Medium:'#ffd700', Far:'#44ddff', 'Very Far':'#88ff88', Magic:'#dd88ff' };
+        html += '<div class="weapon-item' + (isActive ? ' weapon-active' : '') + '">';
+        html += '<div class="weapon-emoji">' + cw.e + '</div>';
+        html += '<div class="weapon-name">' + cw.n + '</div>';
+        html += '<div class="weapon-stats" style="color:' + (COLORS2[cw.cat]||'#fff') + '">⚔️ ' + cw.dmg + ' dmg &nbsp; 📏 ' + cw.range + '</div>';
+        html += '<div class="weapon-level" style="color:#00eeaa">📦 Chest</div>';
+        html += '<div class="weapon-btns"><button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipWeapon(\'' + sid + '\')">' + (isActive ? '✓ Equipped' : 'Equip') + '</button></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
     grid.innerHTML = html;
   }
 
@@ -1130,7 +1373,7 @@ function speciesCount(acc, petId) {
 
   window.equipWeapon = function (id) {
     var acc = ensureItems(getAccount());
-    if (!acc.weapons[id]) return;
+    if (!acc.weapons[id] && !(acc.chestWeapons && acc.chestWeapons[id])) return;
     acc.activeWeapon = id;
     saveAccount(acc);
     renderWeapons(acc);
