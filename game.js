@@ -306,16 +306,7 @@ var WEAPONS = [
 ];
 window.WEAPONS = WEAPONS;
 
-var FOOD_ITEMS = [
-  {id:'apple',   e:'🍎', n:'Apple',        cost:50,  heal:30,   atk:0,  desc:'Restore 30 HP'},
-  {id:'bread',   e:'🍞', n:'Bread',        cost:90,  heal:70,   atk:0,  desc:'Restore 70 HP'},
-  {id:'soup',    e:'🍲', n:'Hearty Soup',  cost:150, heal:150,  atk:0,  desc:'Restore 150 HP'},
-  {id:'steak',   e:'🥩', n:'Power Steak',  cost:200, heal:0,    atk:8,  desc:'+8 attack this run'},
-  {id:'potion',  e:'🧪', n:'Atk Potion',   cost:300, heal:0,    atk:18, desc:'+18 attack this run'},
-  {id:'feast',   e:'🍖', n:'Royal Feast',  cost:500, heal:9999, atk:12, desc:'Full heal + +12 attack'},
-  {id:'warbrew', e:'⚗️', n:'War Brew',     cost:750, heal:9999, atk:30, desc:'Full heal + +30 attack'},
-];
-window.FOOD_ITEMS = FOOD_ITEMS;
+// FOOD_ITEMS defined in meta.js and exported as window.FOOD_ITEMS
 
 function lvlDef(lv) {
   var zoneLv = lv % 50;
@@ -345,6 +336,10 @@ window.addEventListener('keydown', function(e) {
   keys[e.code] = true;
   if ((e.code === 'KeyS' || e.code === 'KeyE') && !e.repeat && G && !G.dead && !G.win) {
     if (G.open) closeShop(); else { keys['KeyS'] = false; openShop(); }
+  }
+  if (e.code === 'KeyF' && !e.repeat && G && !G.dead && !G.win) {
+    var fov = document.getElementById('foodov');
+    if (fov && fov.style.display === 'flex') closeBackpack(); else openBackpack();
   }
   e.preventDefault();
 });
@@ -1638,10 +1633,12 @@ function getCatCls(cat) {
 
 function openShop()  {
   if (!G || G.dead || G.win) return;
+  closeBackpack();
   G.open = true; renderShop();
   document.getElementById('ov').style.display = 'flex';
   document.getElementById('touch-atk').style.display = 'none';
   document.getElementById('touch-shop').style.display = 'none';
+  document.getElementById('food-btn').style.display = 'none';
 }
 function closeShop() {
   if (!G) return;
@@ -1649,6 +1646,7 @@ function closeShop() {
   document.getElementById('ov').style.display = 'none';
   document.getElementById('touch-atk').style.display = '';
   document.getElementById('touch-shop').style.display = '';
+  document.getElementById('food-btn').style.display = '';
 }
 
 function touchAtkDown(e) {
@@ -1716,38 +1714,59 @@ function renderShop() {
   });
   document.getElementById('sgrid').innerHTML = html;
 
-  // Food section
-  var foodHtml = '';
-  FOOD_ITEMS.forEach(function(f) {
-    var ca = G.gems < f.cost;
-    foodHtml += '<div class="sc food-item' + (ca ? ' ca' : '') + '" onclick="' + (ca ? '' : 'buyFood(\'' + f.id + '\')') + '">';
-    foodHtml += '<div class="pe">' + f.e + '</div>';
-    foodHtml += '<div class="pn">' + f.n + '</div>';
-    foodHtml += '<div class="pd">' + f.desc + '</div>';
-    foodHtml += '<div class="pc">💎 ' + f.cost + '</div>';
-    foodHtml += '</div>';
-  });
-  document.getElementById('foodgrid').innerHTML = foodHtml;
 }
 
-function buyFood(id) {
-  var f = null;
-  for (var i = 0; i < FOOD_ITEMS.length; i++) { if (FOOD_ITEMS[i].id === id) { f = FOOD_ITEMS[i]; break; } }
-  if (!f || G.gems < f.cost) return;
-  G.gems -= f.cost;
+function openBackpack() {
+  if (!G || G.dead || G.win) return;
+  if (G.open) closeShop();
+  document.getElementById('foodov').style.display = 'flex';
+  document.getElementById('food-btn').style.display = 'none';
+  renderBackpack();
+}
+function closeBackpack() {
+  document.getElementById('foodov').style.display = 'none';
+  document.getElementById('food-btn').style.display = '';
+}
+function renderBackpack() {
+  var bp = window.META_getBackpack ? window.META_getBackpack() : {};
+  var foods = window.FOOD_ITEMS || [];
+  var ids = Object.keys(bp).filter(function(k) { return bp[k] > 0; });
+  if (ids.length === 0) {
+    document.getElementById('bpgrid').innerHTML = '<div style="color:#888;text-align:center;padding:16px;font-size:12px">Backpack empty!<br>Buy food at the Hub 🏠</div>';
+    return;
+  }
+  var html = '';
+  ids.forEach(function(fid) {
+    var qty = bp[fid];
+    var f = null;
+    for (var i = 0; i < foods.length; i++) { if (foods[i].id === fid) { f = foods[i]; break; } }
+    if (!f) return;
+    html += '<div class="sc food-item" onclick="eatFood(\'' + fid + '\')">';
+    html += '<div class="owned-badge" style="position:relative;left:0;top:0;margin-bottom:2px">×' + qty + '</div>';
+    html += '<div class="pe">' + f.e + '</div>';
+    html += '<div class="pn">' + f.n + '</div>';
+    html += '<div class="pd">' + f.desc + '</div>';
+    html += '<div class="pc" style="color:#44ff88">Eat</div>';
+    html += '</div>';
+  });
+  document.getElementById('bpgrid').innerHTML = html;
+}
+function eatFood(id) {
+  if (!G || G.dead || G.win) return;
+  var f = window.META_consumeFood ? window.META_consumeFood(id) : null;
+  if (!f) return;
   var p = G.p;
   if (f.heal > 0) {
-    var healed = Math.min(p.mhp - p.hp, f.heal);
-    p.hp = Math.min(p.mhp, p.hp + f.heal);
-    G.fl(p.x, p.y - 20, '+' + healed + '❤️', '#44ff88');
-    G.burst(p.x, p.y, '#44ff88', 10);
+    var healed = Math.min(p.mhp - p.hp, f.heal >= 9999 ? p.mhp : f.heal);
+    p.hp = f.heal >= 9999 ? p.mhp : Math.min(p.mhp, p.hp + f.heal);
+    if (healed > 0) { G.fl(p.x, p.y - 20, '+' + healed + '❤️', '#44ff88'); G.burst(p.x, p.y, '#44ff88', 12); }
   }
   if (f.atk > 0) {
     G.foodAtk = (G.foodAtk || 0) + f.atk;
-    G.fl(p.x, p.y - 36, '+' + f.atk + '⚔️ atk!', '#ffdd44');
+    G.fl(p.x, p.y - 38, '+' + f.atk + '⚔️ food!', '#ffdd44');
   }
   sndBuyPet();
-  renderShop();
+  renderBackpack();
 }
 
 function buyUpgrade(id) {
@@ -1840,11 +1859,13 @@ function applyHomePets(homePets) {
 }
 
 function resetGameUI() {
-  document.getElementById('ov').style.display  = 'none';
-  document.getElementById('gov').style.display = 'none';
-  document.getElementById('wov').style.display = 'none';
+  document.getElementById('ov').style.display     = 'none';
+  document.getElementById('gov').style.display    = 'none';
+  document.getElementById('wov').style.display    = 'none';
+  document.getElementById('foodov').style.display = 'none';
   document.getElementById('touch-atk').style.display  = '';
   document.getElementById('touch-shop').style.display = '';
+  document.getElementById('food-btn').style.display   = '';
 }
 
 window.META_startGame = function (config, homePets) {

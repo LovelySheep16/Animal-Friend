@@ -75,6 +75,11 @@
         <span class="hab-label">Chests</span>
         <span class="hab-desc">Open for exclusive loot<br><small>10 tiers · costs emeralds</small></span>
       </button>
+      <button class="hub-action-btn" onclick="showFoodShop()">
+        <span class="hab-icon">🍎</span>
+        <span class="hab-label">Food Shop</span>
+        <span class="hab-desc">Buy food for your runs<br><small>30 foods · persist until eaten</small></span>
+      </button>
       <button class="hub-action-btn hub-boss-btn" onclick="playBossRun()">
         <span class="hab-icon">🌠</span>
         <span class="hab-label">Boss Fight</span>
@@ -182,6 +187,17 @@
   </div>
 </div>
 
+<!-- ── Food Shop ──────────────────────────────────────────── -->
+<div id="screen-food-shop" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🍎 Food Shop</div>
+    <div class="shop-rubies">Rubies: <span id="food-shop-rubies">0 🔴</span></div>
+    <div style="color:#ffcc88;font-size:11px;text-align:center;margin-bottom:6px">Food persists in your backpack until eaten. Use F or the backpack button in-game!</div>
+    <div id="food-shop-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
 <!-- ── Run Result ────────────────────────────────────────── -->
 <div id="screen-result" class="meta-screen" style="display:none">
   <div class="meta-card">
@@ -214,13 +230,18 @@
   <div id="lvlmap"></div>
   <button id="touch-atk" ontouchstart="touchAtkDown(event)" ontouchend="touchAtkUp(event)" onmousedown="touchAtkDown(event)" onmouseup="touchAtkUp(event)">⚔️<span>ATTACK</span></button>
   <button id="touch-shop" onclick="openShop()">🛒<span>SHOP</span></button>
+  <button id="food-btn" onclick="openBackpack()">🎒<span>FOOD</span></button>
+
+  <div id="foodov">
+    <div class="otitle">🎒 Backpack — <span id="bplbl"></span></div>
+    <div id="bpgrid" class="food-grid"></div>
+    <button class="btn" style="margin:14px auto;display:block" onclick="closeBackpack()">▶ Back to Game</button>
+  </div>
 
   <div id="ov">
     <div class="otitle">🛒 Shop — <span id="sglbl">0💎</span></div>
     <div class="scat upgrade">⚡ Upgrades</div>
     <div id="upgrid"></div>
-    <div class="scat" style="background:#2a1a00;color:#ffcc44;margin-top:10px">🍎 Food</div>
-    <div id="foodgrid" class="food-grid"></div>
     <div class="scat attacker" style="margin-top:10px">🐾 Pets</div>
     <div id="sgrid"></div>
     <button class="btn" style="margin:14px auto;display:block" onclick="closeShop()">▶ Back to Game</button>

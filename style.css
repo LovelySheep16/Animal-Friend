@@ -158,7 +158,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 }
 
 /* Game buttons — visible on all devices */
-#touch-atk, #touch-shop {
+#touch-atk, #touch-shop, #food-btn {
   position:absolute;bottom:18px;z-index:10;
   border:none;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -185,7 +185,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   color:#fff;
 }
 #touch-shop:active { transform:scale(0.88); }
-#touch-atk span, #touch-shop span {
+#touch-atk span, #touch-shop span, #food-btn span {
   font-size:9px;font-weight:bold;letter-spacing:1px;color:#fff;opacity:0.9;
   font-family:'Courier New',monospace;
 }
@@ -442,6 +442,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
           padding-right:  max(10px, env(safe-area-inset-right)); }
 #touch-atk { bottom: max(18px, env(safe-area-inset-bottom)); }
 #touch-shop { bottom: max(18px, env(safe-area-inset-bottom)); }
+#food-btn   { bottom: max(18px, env(safe-area-inset-bottom)); }
 
 @media (max-width:700px) {
   /* ── Meta screens: full-width, scrollable from top ── */
@@ -501,6 +502,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   /* ── Touch buttons ── */
   #touch-atk  { width:80px; height:80px; font-size:28px; right:10px; }
   #touch-shop { width:80px; height:80px; font-size:28px; right:100px; }
+  #food-btn   { width:80px; height:80px; font-size:28px; right:190px; }
 
   /* ── Weapon / Servant grids ── */
   .weapon-cat-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
@@ -544,6 +546,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   .habitat { width:120px; height:108px; }
   #touch-atk  { width:72px; height:72px; right:8px; }
   #touch-shop { width:72px; height:72px; right:90px; }
+  #food-btn   { width:72px; height:72px; right:172px; }
   .meta-title { font-size:17px; }
   .weapon-cat-grid { grid-template-columns:1fr 1fr; }
 }
@@ -703,9 +706,38 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 .chest-desc{color:#668877;font-size:9px;text-align:center;}
 .chest-cost{color:#00ffaa;font-size:12px;font-weight:bold;}
 
-/* ── Food section in in-game shop ────────────────────────── */
+/* ── In-game food button & backpack overlay ──────────────── */
+#food-btn {
+  right:176px;
+  background:radial-gradient(circle at 40% 35%,#44aa44,#1a5c1a);
+  border:3px solid #88dd88;
+  color:#fff;
+}
+#food-btn:active { transform:scale(0.88); }
+#foodov {
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:rgba(12,2,32,.94);
+  display:none;flex-direction:column;align-items:center;
+  justify-content:flex-start;z-index:20;overflow-y:auto;padding:10px;
+}
+#foodov::-webkit-scrollbar{width:6px;}
+#foodov::-webkit-scrollbar-track{background:rgba(20,0,40,.5);}
+#foodov::-webkit-scrollbar-thumb{background:#6030a0;border-radius:3px;}
+/* ── Food grid ───────────────────────────────────────────── */
 .food-grid{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:4px 0;}
 .food-item{background:rgba(50,25,0,0.85);border:1px solid #aa7700;}
+/* ── Food shop (hub) ─────────────────────────────────────── */
+.food-shop-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:4px;}
+.food-shop-item{
+  background:rgba(40,20,0,0.9);border:1px solid #aa7700;border-radius:8px;
+  padding:8px;width:100px;display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+.fsi-emoji{font-size:28px;}
+.fsi-name{color:#ffcc66;font-size:11px;font-weight:bold;text-align:center;}
+.fsi-desc{color:#ccaa44;font-size:9px;text-align:center;}
+.fsi-cost{color:#ff9900;font-size:11px;font-weight:bold;}
+.fsi-qty{color:#88ff88;font-size:10px;}
+.fsi-btn{font-size:10px;padding:3px 10px;margin-top:2px;}
 
 /* ── Result awards ────────────────────────────────────────── */
 .result-awards{margin-top:10px;text-align:center;}

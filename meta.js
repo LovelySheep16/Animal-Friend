@@ -263,6 +263,42 @@
   ];
   window.CHESTS = CHESTS;
 
+  // ── 30 food items (bought with rubies, stored in backpack) ────────────────
+  var FOOD_ITEMS = [
+    // Fruits — mostly heal
+    {id:'candy',       e:'🍬', n:'Candy',          cat:'🍬 Sweets',   cost:8,   heal:12,   atk:2,  desc:'12 HP + 2 atk'},
+    {id:'cookie',      e:'🍪', n:'Cookie',         cat:'🍬 Sweets',   cost:14,  heal:18,   atk:3,  desc:'18 HP + 3 atk'},
+    {id:'apple',       e:'🍎', n:'Apple',          cat:'🍎 Fruits',   cost:18,  heal:25,   atk:0,  desc:'Restore 25 HP'},
+    {id:'banana',      e:'🍌', n:'Banana',         cat:'🍎 Fruits',   cost:25,  heal:40,   atk:0,  desc:'Restore 40 HP'},
+    {id:'chocolate',   e:'🍫', n:'Chocolate',      cat:'🍬 Sweets',   cost:30,  heal:40,   atk:5,  desc:'40 HP + 5 atk'},
+    {id:'cherry',      e:'🍒', n:'Cherry',         cat:'🍎 Fruits',   cost:35,  heal:55,   atk:0,  desc:'Restore 55 HP'},
+    {id:'bread',       e:'🍞', n:'Bread',          cat:'🍽️ Meals',    cost:40,  heal:50,   atk:0,  desc:'Restore 50 HP'},
+    {id:'herbtea',     e:'🍵', n:'Herb Tea',       cat:'🧪 Brews',    cost:45,  heal:30,   atk:8,  desc:'30 HP + 8 atk'},
+    {id:'strawberry',  e:'🍓', n:'Strawberry',     cat:'🍎 Fruits',   cost:50,  heal:70,   atk:0,  desc:'Restore 70 HP'},
+    {id:'cake',        e:'🎂', n:'Cake',           cat:'🍬 Sweets',   cost:55,  heal:60,   atk:7,  desc:'60 HP + 7 atk'},
+    {id:'icecream',    e:'🍦', n:'Ice Cream',      cat:'🍬 Sweets',   cost:65,  heal:75,   atk:9,  desc:'75 HP + 9 atk'},
+    {id:'soup',        e:'🍲', n:'Soup',           cat:'🍽️ Meals',    cost:70,  heal:80,   atk:5,  desc:'80 HP + 5 atk'},
+    {id:'grapes',      e:'🍇', n:'Grapes',         cat:'🍎 Fruits',   cost:75,  heal:90,   atk:3,  desc:'90 HP + 3 atk'},
+    {id:'pizza',       e:'🍕', n:'Pizza',          cat:'🍽️ Meals',    cost:90,  heal:85,   atk:10, desc:'85 HP + 10 atk'},
+    {id:'powerdrink',  e:'🥤', n:'Power Drink',    cat:'🧪 Brews',    cost:100, heal:0,    atk:18, desc:'+18 attack'},
+    {id:'watermelon',  e:'🍉', n:'Watermelon',     cost:100, heal:120,  atk:0,  desc:'Restore 120 HP'},
+    {id:'steak',       e:'🥩', n:'Power Steak',    cat:'🍽️ Meals',    cost:110, heal:0,    atk:14, desc:'+14 attack'},
+    {id:'burger',      e:'🍔', n:'Burger',         cat:'🍽️ Meals',    cost:120, heal:100,  atk:12, desc:'100 HP + 12 atk'},
+    {id:'pineapple',   e:'🍍', n:'Pineapple',      cat:'🍎 Fruits',   cost:130, heal:140,  atk:5,  desc:'140 HP + 5 atk'},
+    {id:'pasta',       e:'🍝', n:'Pasta',          cat:'🍽️ Meals',    cost:150, heal:120,  atk:16, desc:'120 HP + 16 atk'},
+    {id:'mango',       e:'🥭', n:'Mango',          cat:'🍎 Fruits',   cost:160, heal:170,  atk:7,  desc:'170 HP + 7 atk'},
+    {id:'potion',      e:'🧪', n:'Magic Potion',   cat:'🧪 Brews',    cost:180, heal:0,    atk:28, desc:'+28 attack'},
+    {id:'roast',       e:'🍖', n:'Roast Meat',     cat:'🍽️ Meals',    cost:200, heal:160,  atk:20, desc:'160 HP + 20 atk'},
+    {id:'elixir',      e:'🫙', n:'Battle Elixir',  cat:'🧪 Brews',    cost:240, heal:80,   atk:32, desc:'80 HP + 32 atk'},
+    {id:'royalcake',   e:'🍰', n:'Royal Cake',     cat:'🍬 Sweets',   cost:280, heal:9999, atk:20, desc:'Full heal + 20 atk'},
+    {id:'feast',       e:'🍱', n:'Royal Feast',    cat:'🍽️ Meals',    cost:300, heal:9999, atk:22, desc:'Full heal + 22 atk'},
+    {id:'dragonbrew',  e:'🐉', n:'Dragon Elixir',  cat:'🧪 Brews',    cost:350, heal:150,  atk:45, desc:'150 HP + 45 atk'},
+    {id:'warbrew',     e:'⚗️', n:'War Brew',       cat:'🧪 Brews',    cost:400, heal:0,    atk:60, desc:'+60 attack'},
+    {id:'phoenixdraught',e:'🔥',n:'Phoenix Draught',cat:'🧪 Brews',   cost:450, heal:9999, atk:40, desc:'Full heal + 40 atk'},
+    {id:'cosmicbrew',  e:'🌌', n:'Cosmic Brew',    cat:'🧪 Brews',    cost:600, heal:9999, atk:80, desc:'Full heal + 80 atk'},
+  ];
+  window.FOOD_ITEMS = FOOD_ITEMS;
+
   var DRAGON_TYPES = {
     aquarium: { e:'💧', n:'Sea Dragon',     rubyPerDay:3  },
     forest:   { e:'🍃', n:'Forest Dragon',  rubyPerDay:5  },
@@ -515,6 +551,7 @@
     if (!acc.chestWeapons)      acc.chestWeapons      = {};
     if (!acc.chestChars)        acc.chestChars        = [];
     if (!acc.chestPets)         acc.chestPets         = {};
+    if (!acc.backpack)          acc.backpack          = {};
     if (!acc.stats) acc.stats = {
       runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
       totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
@@ -573,7 +610,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -1377,6 +1414,65 @@ function speciesCount(acc, petId) {
     acc.activeWeapon = id;
     saveAccount(acc);
     renderWeapons(acc);
+  };
+
+  // ── Food Shop ─────────────────────────────────────────────────────────────
+  window.META_getBackpack = function() {
+    var acc = ensureItems(getAccount());
+    return acc.backpack || {};
+  };
+
+  window.META_consumeFood = function(id) {
+    var acc = ensureItems(getAccount());
+    if (!acc.backpack[id] || acc.backpack[id] < 1) return null;
+    acc.backpack[id]--;
+    if (acc.backpack[id] <= 0) delete acc.backpack[id];
+    saveAccount(acc);
+    var items = window.FOOD_ITEMS || [];
+    for (var i = 0; i < items.length; i++) { if (items[i].id === id) return items[i]; }
+    return null;
+  };
+
+  window.showFoodShop = function() {
+    var acc = ensureItems(getAccount());
+    document.getElementById('food-shop-rubies').textContent = acc.rubies + ' 🔴';
+    var grid = document.getElementById('food-shop-grid');
+    var items = window.FOOD_ITEMS || [];
+    var cats = [], seen = {};
+    items.forEach(function(f) { if (!seen[f.cat]) { seen[f.cat] = true; cats.push(f.cat); } });
+    var html = '';
+    cats.forEach(function(cat) {
+      html += '<div class="scat" style="background:#2a1a00;color:#ffcc44;margin:8px 0 4px">' + cat + '</div>';
+      html += '<div class="food-shop-row">';
+      items.forEach(function(f) {
+        if (f.cat !== cat) return;
+        var qty = acc.backpack[f.id] || 0;
+        html += '<div class="food-shop-item">';
+        html += '<div class="fsi-emoji">' + f.e + '</div>';
+        html += '<div class="fsi-name">' + f.n + '</div>';
+        html += '<div class="fsi-desc">' + f.desc + '</div>';
+        html += '<div class="fsi-cost">' + f.cost + ' 🔴</div>';
+        html += '<div class="fsi-qty">In bag: ' + qty + '</div>';
+        html += '<button class="btn fsi-btn" onclick="buyFoodItem(\'' + f.id + '\')"' + (acc.rubies < f.cost ? ' disabled' : '') + '>Buy</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    grid.innerHTML = html;
+    showScreen('screen-food-shop');
+  };
+
+  window.buyFoodItem = function(id) {
+    var acc = ensureItems(getAccount());
+    var items = window.FOOD_ITEMS || [];
+    var f = null;
+    for (var i = 0; i < items.length; i++) { if (items[i].id === id) { f = items[i]; break; } }
+    if (!f || acc.rubies < f.cost) return;
+    acc.rubies -= f.cost;
+    acc.stats.rubiesSpent = (acc.stats.rubiesSpent || 0) + f.cost;
+    acc.backpack[id] = (acc.backpack[id] || 0) + 1;
+    saveAccount(acc);
+    window.showFoodShop();
   };
 
   // ── Init ──────────────────────────────────────────────────────────────────
