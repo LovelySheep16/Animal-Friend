@@ -60,6 +60,16 @@
         <span class="hab-label">Awards</span>
         <span class="hab-desc">100 challenges, earn rubies<br><small>Track your progress</small></span>
       </button>
+      <button class="hub-action-btn" onclick="showCharacters()">
+        <span class="hab-icon">🧙</span>
+        <span class="hab-label">Characters</span>
+        <span class="hab-desc">100 fighters to collect<br><small>Each has a unique blast!</small></span>
+      </button>
+      <button class="hub-action-btn hub-boss-btn" onclick="playBossRun()">
+        <span class="hab-icon">🌠</span>
+        <span class="hab-label">Boss Fight</span>
+        <span class="hab-desc">Face the Cosmic Terror!<br><small>Once per 90 days · +10,000 🔴</small></span>
+      </button>
     </div>
   </div>
 </div>
@@ -129,6 +139,17 @@
   </div>
 </div>
 
+<!-- ── Characters ────────────────────────────────────────── -->
+<div id="screen-characters" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🧙 Characters</div>
+    <div class="shop-rubies">Rubies: <span id="char-rubies">0 🔴</span></div>
+    <div style="color:#9060c0;font-size:11px;text-align:center;margin-bottom:4px">Bear is free. Others cost rubies. Each character has a unique Blast (every 100 hits you deal).</div>
+    <div id="char-grid" class="weapon-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
 <!-- ── Run Result ────────────────────────────────────────── -->
 <div id="screen-result" class="meta-screen" style="display:none">
   <div class="meta-card">
@@ -152,6 +173,7 @@
     <div class="stat"><div class="lbl">GEMS</div><span id="gtxt" style="color:#ffd700">0💎</span></div>
     <div class="stat"><div class="lbl">SCORE</div><span id="stxt">0</span></div>
     <div class="stat"><div class="lbl">ENEMIES</div><span id="etxt" style="color:#ff7070">0</span></div>
+    <div class="stat"><div class="lbl">BLAST</div><span id="blasttxt" style="color:#80c0ff">0/100</span></div>
     <div class="stat" style="margin-left:auto"><div class="lbl">PETS</div><div id="petbar"></div></div>
     <button class="btn hud-exit-btn" onclick="metaReturn(false)">🏠 Hub</button>
   </div>

@@ -388,6 +388,12 @@ function Game() {
   this.boxes = []; this.gemChests = []; this.petTrail = [];
   this.volcano = null; this.lavaBlasts = []; this.volcanoCooldown = 0;
   this.monstersKilled = 0; this.wallsBroken = 0; this.volcanoGems = 0;
+  // Characters & blast
+  this.charDef = null; this.blastCharge = 0; this.blastReady = false; this.digRubies = 0;
+  // Boss run
+  this.isBossRun = false; this.bossLasers = [];
+  // Debuffs (applied by blasts)
+  this.slowUntil = 0; this.weakenUntil = 0;
   this.build(); this.showBanner();
 }
 
@@ -563,6 +569,64 @@ Game.prototype.rf = function() {
     if (!this.map[r][c]) { var x = c*T+T/2, y = GT+r*T+T/2; if (Math.hypot(x-px, y-py) > T*5) return {x:x, y:y}; }
   }
   return {x:T*8, y:GT+T*5};
+};
+
+Game.prototype.buildBossLevel = function() {
+  this.C = Math.floor(canvas.width / T); this.R = Math.floor(GH / T);
+  // Open arena — only border walls
+  this.map = [];
+  for (var r = 0; r < this.R; r++) {
+    this.map[r] = [];
+    for (var c = 0; c < this.C; c++) {
+      this.map[r][c] = (r === 0 || r === this.R - 1 || c === 0 || c === this.C - 1) ? 1 : 0;
+    }
+  }
+  this.wallHp = {};
+  this.p = {x: T*3, y: GT+T*3, hp: 100, mhp: 100, atk: false, at: 0, dir: 1, inv: 0};
+  this.ld = { name: '🌠 COSMIC LAIR — Boss Fight', zone: {b:'#02000a', w:'#1a0040', f:'#08000f', flag:'🌠', n:'Cosmic Lair'}, pool: [], count: 0, li: 0, loop: 0 };
+  var bx = Math.round(canvas.width * 0.7), by = Math.round(GT + GH * 0.5);
+  this.mons = [{ t:'Cosmic Terror', e:'🌠', hp:10000, mhp:10000, atk:50, spd:45, gem:0,
+    x:bx, y:by, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isBoss:true, laserTimer:2000 }];
+  this.bossLasers = []; this.chest = null; this.chestPet = null; this.alreadyOwned = true;
+  this.volcano = null; this.lavaBlasts = []; this.gemChests = []; this.boxes = [];
+  this.blastCharge = 0; this.blastReady = false;
+  var n = Date.now();
+  for (var i = 0; i < this.pets.length; i++) {
+    var pt = this.pets[i];
+    if (!pt.mhp) { pt.mhp = petMaxHp(pt); pt.hp = pt.mhp; }
+    if (!this.patk[pt.uid]) this.patk[pt.uid] = n;
+    if (pt.hi > 0 && !this.ptim[pt.uid]) this.ptim[pt.uid] = n;
+    var ang = (i / Math.max(1, this.pets.length)) * Math.PI * 2;
+    pt.x = this.p.x + Math.cos(ang) * 60; pt.y = this.p.y + Math.sin(ang) * 45;
+    pt.wdx = 0; pt.wdy = 0; pt.wtim = 0; pt.healMode = false; pt.dead = false;
+  }
+  this.showBanner();
+};
+
+Game.prototype.updateBossLasers = function(now) {
+  var self = this, p = this.p, LASER_DMG = 50, LASER_PET_PCT = 0.30;
+  this.bossLasers = this.bossLasers.filter(function(b) {
+    if (b.done) return false;
+    if (now < b.warnUntil) return true;
+    b.done = true;
+    if (Math.hypot(p.x - b.tx, p.y - b.ty) < 38) {
+      if (p.inv <= 0) {
+        p.hp = Math.max(0, p.hp - LASER_DMG); p.inv = 400;
+        self.burst(b.tx, b.ty, '#00ffff', 10); self.fl(b.tx, b.ty, '-' + LASER_DMG + '⚡', '#00ffff');
+        if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); }
+      }
+    } else { self.burst(b.tx, b.ty, '#0088aa', 5); }
+    self.pets.forEach(function(pt) {
+      if (pt.dead || pt.x === undefined) return;
+      if (Math.hypot(pt.x - b.tx, pt.y - b.ty) < 34) {
+        var pdmg = pt.mhp ? Math.round(pt.mhp * LASER_PET_PCT) : LASER_DMG;
+        pt.hp = Math.max(0, pt.hp - pdmg);
+        self.fl(pt.x, pt.y, '-' + pdmg + '⚡', '#00ffff');
+        if (pt.hp <= 0) self.killPet(pt);
+      }
+    });
+    return false;
+  });
 };
 
 Game.prototype.tile = function(x, y) {
@@ -867,14 +931,51 @@ Game.prototype.update = function(dt) {
   this.aa = Math.max(0, this.aa - dt*1000);
   if (p.inv > 0) p.inv -= dt*1000;
 
+  var nowMon = Date.now();
   this.mons.forEach(function(m) {
     if (m.dead) return;
+    var mSpd = m.spd;
+    if (self.slowUntil && nowMon < self.slowUntil) mSpd = Math.round(mSpd * 0.30);
+    // Boss-specific logic
+    if (m.isBoss) {
+      m.mt -= dt*1000;
+      if (m.mt <= 0) {
+        var ba = Math.atan2(p.y - m.y, p.x - m.x) + (Math.random()-0.5)*0.4;
+        m.dx = Math.cos(ba); m.dy = Math.sin(ba); m.mt = 600 + Math.random()*800;
+      }
+      self.mv(m, m.dx, m.dy, mSpd, dt);
+      if (Math.hypot(m.x - p.x, m.y - p.y) < 44) {
+        m.at -= dt*1000;
+        if (m.at <= 0) {
+          m.at = 1800;
+          var mAtk = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk * 0.5) : m.atk;
+          if (p.inv <= 0) { p.hp = Math.max(0, p.hp - mAtk); p.inv = 400; self.burst(p.x, p.y, '#ff3333', 8); self.fl(p.x, p.y, '-'+mAtk, '#ff4444'); if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); } }
+        }
+      }
+      m.pat -= dt*1000;
+      if (m.pat <= 0) {
+        var nearBP = null, nearBPD = 44;
+        self.pets.forEach(function(pet) { if (!pet.dead && pet.x !== undefined) { var d = Math.hypot(m.x-pet.x, m.y-pet.y); if (d < nearBPD) { nearBP = pet; nearBPD = d; } } });
+        if (nearBP) { m.pat = 1400; var mAtkP = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk*0.5) : m.atk; nearBP.hp = Math.max(0, nearBP.hp - mAtkP); self.fl(nearBP.x, nearBP.y-8, '-'+mAtkP, '#ff6644'); if (nearBP.hp <= 0) self.killPet(nearBP); }
+      }
+      // Fire lasers
+      m.laserTimer = (m.laserTimer || 3000) - dt*1000;
+      if (m.laserTimer <= 0) {
+        m.laserTimer = 1800 + Math.random()*2000;
+        var targets = [p];
+        self.pets.forEach(function(pt) { if (!pt.dead && pt.x !== undefined) targets.push(pt); });
+        var tgt = targets[Math.floor(Math.random()*targets.length)];
+        self.bossLasers.push({ bx:m.x, by:m.y, tx:tgt.x+(Math.random()-0.5)*30, ty:tgt.y+(Math.random()-0.5)*30, warnUntil:nowMon+900, done:false });
+      }
+      return;
+    }
+    // Normal monster logic
     m.mt -= dt*1000;
     if (m.mt <= 0) {
       var a = Math.atan2(p.y - m.y, p.x - m.x) + (Math.random() - .5) * 0.5;
       m.dx = Math.cos(a); m.dy = Math.sin(a); m.mt = 180 + Math.random() * 280;
     }
-    self.mv(m, m.dx, m.dy, m.spd, dt);
+    self.mv(m, m.dx, m.dy, mSpd, dt);
     if (Math.hypot(m.x - p.x, m.y - p.y) < 32) {
       m.at -= dt*1000;
       if (m.at <= 0) {
@@ -886,8 +987,9 @@ Game.prototype.update = function(dt) {
             if (!shp.dead && shp.sc > 0 && shp.x !== undefined && Math.hypot(shp.x-m.x, shp.y-m.y) < 90 && Math.random() < shp.sc) { hitBlocked = true; break; }
           }
           if (hitBlocked) { self.fl(p.x, p.y, 'BLOCKED!', '#40d8ff'); return; }
-          p.hp = Math.max(0, p.hp - m.atk); p.inv = 350;
-          self.burst(p.x, p.y, '#ff3333', 6); self.fl(p.x, p.y, '-' + m.atk, '#ff4444');
+          var mDmg = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk * 0.5) : m.atk;
+          p.hp = Math.max(0, p.hp - mDmg); p.inv = 350;
+          self.burst(p.x, p.y, '#ff3333', 6); self.fl(p.x, p.y, '-' + mDmg, '#ff4444');
           if (p.hp <= 0) { self.dead = true; self.showDead(); }
         }
       }
@@ -908,8 +1010,9 @@ Game.prototype.update = function(dt) {
       });
       if (nearPet) {
         m.pat = Math.max(700, 1200 - self.lv * 12);
-        nearPet.hp = Math.max(0, nearPet.hp - m.atk);
-        self.fl(nearPet.x, nearPet.y - 8, '-' + m.atk, '#ff6644');
+        var nDmg = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk * 0.5) : m.atk;
+        nearPet.hp = Math.max(0, nearPet.hp - nDmg);
+        self.fl(nearPet.x, nearPet.y - 8, '-' + nDmg, '#ff6644');
         if (nearPet.hp <= 0) self.killPet(nearPet);
       }
     }
@@ -923,7 +1026,7 @@ Game.prototype.update = function(dt) {
   var now = Date.now();
   this.updatePets(dt, now);
   this.updateTowers(dt, now);
-  this.updateVolcano(dt, now);
+  if (this.isBossRun) { this.updateBossLasers(now); } else { this.updateVolcano(dt, now); }
   this.checkPairBreeding(now);
 
   this.parts  = this.parts.filter(function(pt) { pt.x += pt.vx*.016; pt.y += pt.vy*.016; pt.l -= dt*1000; return pt.l > 0; });
@@ -946,13 +1049,14 @@ Game.prototype.update = function(dt) {
   this.mons = this.mons.filter(function(m) { return !m.dead || m.reviving; });
 
   var chestDone = !this.chest || this.chest.open || this.alreadyOwned;
-  if (this.mons.length === 0 && chestDone && !this.trans) {
+  var monsAlive = this.mons.filter(function(m) { return !m.dead && !m.reviving; }).length;
+  if (this.isBossRun) {
+    if (monsAlive === 0 && !this.trans) { this.trans = true; if (window.META_onBossWin) window.META_onBossWin(); }
+  } else if (monsAlive === 0 && chestDone && !this.trans) {
     this.trans = true;
-    {
-      if (Math.random() < Math.min(0.80, 0.20 + 0.08 * this.upg.petluck)) this.awardFreePet(this.lv);
-      this.lv++; this.showBanner(); sndLevelUp();
-      var s2 = this; setTimeout(function() { s2.build(); s2.trans = false; }, 1800);
-    }
+    if (Math.random() < Math.min(0.80, 0.20 + 0.08 * this.upg.petluck)) this.awardFreePet(this.lv);
+    this.lv++; this.showBanner(); sndLevelUp();
+    var s2 = this; setTimeout(function() { s2.build(); s2.trans = false; }, 1800);
   }
   this.hud();
 };
@@ -964,23 +1068,76 @@ Game.prototype.dmgChest = function(dmg) {
   if (this.chest.hp <= 0) this.openChest();
 };
 
+Game.prototype.doBlast = function() {
+  if (!this.blastReady) return;
+  this.blastReady = false; this.blastCharge = 0;
+  var p = this.p, self = this, cd = this.charDef, now = Date.now();
+  sndLevelUp();
+  this.burst(p.x, p.y, '#ffff00', 30);
+  this.fl(p.x, p.y - 30, '💥 BLAST!', '#ffff00');
+  if (!cd) return;
+  if (cd.blast === 'damage') {
+    var bdmg = Math.round((this.weaponDmg || 20) * (this.weaponLevel || 1) * cd.blastPow * 5 + (cd.atkBonus || 0) * 3);
+    this.mons.forEach(function(m) {
+      if (m.dead) return;
+      m.hp -= bdmg;
+      self.fl(m.x, m.y, '-' + bdmg + '💥', '#ffff00');
+      self.burst(m.x, m.y, '#ffff00', 6);
+      if (m.hp <= 0) self.kill(m);
+    });
+  } else if (cd.blast === 'slow') {
+    this.slowUntil = now + Math.round(5000 * cd.blastPow);
+    this.fl(p.x, p.y - 40, '❄️ All slowed!', '#88ddff');
+    this.mons.forEach(function(m) { if (!m.dead) self.burst(m.x, m.y, '#88ddff', 5); });
+  } else if (cd.blast === 'weaken') {
+    this.weakenUntil = now + Math.round(8000 * cd.blastPow);
+    this.fl(p.x, p.y - 40, '⬇️ All weakened!', '#cc88ff');
+    this.mons.forEach(function(m) { if (!m.dead) self.burst(m.x, m.y, '#cc88ff', 5); });
+  } else if (cd.blast === 'heal') {
+    var healAmt = Math.round(p.mhp * Math.min(1, cd.blastPow * 0.5));
+    p.hp = Math.min(p.mhp, p.hp + healAmt);
+    this.fl(p.x, p.y - 20, '+' + healAmt + '❤️ Heal!', '#44ff88');
+    this.burst(p.x, p.y, '#44ff88', 20);
+    this.pets.forEach(function(pt) {
+      if (pt.dead || !pt.mhp) return;
+      pt.hp = pt.mhp;
+      self.fl(pt.x, pt.y - 8, '❤️', '#44ff88');
+    });
+  } else if (cd.blast === 'dig') {
+    var gems = Math.round(cd.blastPow * 12);
+    this.gems += gems; this.score += gems * 10;
+    this.digRubies += Math.round(cd.blastPow);
+    this.fl(p.x, p.y - 30, '+' + gems + '💎 Dig!', '#ffd700');
+    this.burst(p.x, p.y, '#ffd700', 20);
+  }
+};
+
 Game.prototype.doAtk = function() {
+  if (this.blastReady) { this.doBlast(); return; }
   var p     = this.p;
   var wdmg  = (this.weaponDmg  || 20) * (this.weaponLevel || 1);
   var range = this.weaponRange || 68;
-  var dmg   = wdmg + this.lv + 8 * this.upg.attack;
+  var dmg   = wdmg + this.lv + 8 * this.upg.attack + (this.charDef ? this.charDef.atkBonus : 0);
   var self  = this;
   var atkColor = this.weaponColor || '#fff';
+  var hitCount = 0;
   this.mons.forEach(function(m) {
     if (m.dead || Math.hypot(m.x-p.x, m.y-p.y) > range) return;
-    m.hp -= dmg;
+    m.hp -= dmg; hitCount++;
     self.fx.push({x1:p.x, y1:p.y, x2:m.x, y2:m.y, l:180, c:atkColor});
     self.fl(m.x, m.y, '-' + dmg, atkColor);
     if (m.hp <= 0) self.kill(m);
   });
   if (this.chest && !this.chest.open && Math.hypot(this.chest.x-p.x, this.chest.y-p.y) < range) {
-    this.dmgChest(dmg);
+    this.dmgChest(dmg); hitCount++;
     this.fx.push({x1:p.x, y1:p.y, x2:this.chest.x, y2:this.chest.y, l:180, c:'#ff8800'});
+  }
+  if (hitCount > 0 && this.charDef) {
+    this.blastCharge += hitCount;
+    if (this.blastCharge >= 100) {
+      this.blastReady = true; this.blastCharge = 100;
+      this.fl(p.x, p.y - 30, '💥 BLAST READY! (press SPACE)', '#ffff00');
+    }
   }
   // Destroy boxes in range
   this.boxes = this.boxes.filter(function(b) {
@@ -1096,7 +1253,13 @@ Game.prototype.showBanner = function() {
   setTimeout(function() { el.style.opacity = '0'; }, 1600);
 };
 Game.prototype.showDead = function() {
-  document.getElementById('glvl').textContent  = (this.lv + 1);
+  if (this.isBossRun) {
+    var ot = document.querySelector('#gov .otitle'); if (ot) ot.textContent = '💀 THE BOSS WON!';
+    document.getElementById('glvl').textContent  = '🌠 Boss';
+  } else {
+    var ot2 = document.querySelector('#gov .otitle'); if (ot2) ot2.textContent = '💀 YOU DIED';
+    document.getElementById('glvl').textContent  = (this.lv + 1);
+  }
   document.getElementById('ggems').textContent = this.gems;
   document.getElementById('gov').style.display = 'flex';
 };
@@ -1107,11 +1270,17 @@ Game.prototype.hud = function() {
   var hpColor = hpPct > 0.5 ? '#44dd44' : hpPct > 0.25 ? '#e8aa20' : '#ff3333';
   document.getElementById('hpfill').style.width      = (hpPct * 100) + '%';
   document.getElementById('hpfill').style.background = hpColor;
-  document.getElementById('ltxt').textContent = (this.lv + 1);
+  document.getElementById('ltxt').textContent = this.isBossRun ? '🌠 Boss' : (this.lv + 1);
   document.getElementById('ztxt').textContent = this.ld ? this.ld.zone.flag + ' ' + this.ld.zone.n : '-';
   document.getElementById('gtxt').textContent = this.gems + '💎';
   document.getElementById('stxt').textContent = this.score;
   document.getElementById('etxt').textContent = this.mons.filter(function(m) { return !m.dead || m.reviving; }).length;
+  var blastEl = document.getElementById('blasttxt');
+  if (blastEl) {
+    if (this.blastReady) { blastEl.textContent = '💥 READY!'; blastEl.style.color = '#ffff00'; }
+    else if (this.charDef) { blastEl.textContent = (this.blastCharge || 0) + '/100'; blastEl.style.color = '#80c0ff'; }
+    else { blastEl.textContent = '—'; blastEl.style.color = '#504060'; }
+  }
 
   var petCounts = {}, petOrder = [];
   this.pets.forEach(function(pt) {
@@ -1285,24 +1454,74 @@ Game.prototype.draw = function() {
 
   this.mons.forEach(function(m) {
     if (m.dead) return;
-    var fsz = m.isGuardian ? 32 : 24;
+    var fsz = m.isBoss ? 48 : m.isGuardian ? 32 : 24;
     ctx.font = fsz + 'px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(m.e, m.x, m.y);
+    if (m.isBoss) {
+      var pulse = 1 + 0.06 * Math.sin(Date.now() / 180);
+      ctx.save(); ctx.translate(m.x, m.y); ctx.scale(pulse, pulse);
+      ctx.fillText(m.e, 0, 0); ctx.restore();
+      ctx.font = 'bold 11px Courier New'; ctx.fillStyle = '#00ffff'; ctx.fillText('COSMIC TERROR', m.x, m.y - 38);
+    } else {
+      ctx.fillText(m.e, m.x, m.y);
+    }
     if (m.isGuardian) { ctx.font = '13px serif'; ctx.fillText('💀', m.x+14, m.y-18); }
-    var bw = m.isGuardian ? 50 : 34;
-    var bx = m.x - bw/2, by = m.y - (m.isGuardian ? 30 : 22);
-    ctx.fillStyle = '#500'; ctx.fillRect(bx, by, bw, 6);
-    ctx.fillStyle = m.isGuardian ? '#ff8800' : '#f44';
-    ctx.fillRect(bx, by, Math.max(0, bw*(m.hp/m.mhp)), 6);
+    var bw = m.isBoss ? 100 : m.isGuardian ? 50 : 34;
+    var bx = m.x - bw/2, by = m.y - (m.isBoss ? 52 : m.isGuardian ? 30 : 22);
+    ctx.fillStyle = '#500'; ctx.fillRect(bx, by, bw, m.isBoss ? 10 : 6);
+    ctx.fillStyle = m.isBoss ? '#00ffff' : m.isGuardian ? '#ff8800' : '#f44';
+    ctx.fillRect(bx, by, Math.max(0, bw*(m.hp/m.mhp)), m.isBoss ? 10 : 6);
+    if (m.isBoss) {
+      ctx.font = '10px Courier New'; ctx.fillStyle = '#aaeeff'; ctx.textAlign = 'center';
+      ctx.fillText(m.hp + ' / ' + m.mhp, m.x, by - 4);
+    }
   });
 
+  // Draw boss lasers
+  if (this.isBossRun && this.bossLasers.length) {
+    var nowD = Date.now();
+    var bossM = null;
+    for (var bi2 = 0; bi2 < this.mons.length; bi2++) { if (this.mons[bi2].isBoss && !this.mons[bi2].dead) { bossM = this.mons[bi2]; break; } }
+    this.bossLasers.forEach(function(b) {
+      if (b.done) return;
+      var frac = Math.max(0, Math.min(1, 1 - (b.warnUntil - nowD) / 900));
+      ctx.globalAlpha = 0.35 + frac * 0.55; ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2 + frac * 4;
+      ctx.setLineDash([10, 6]);
+      ctx.beginPath(); ctx.moveTo(bossM ? bossM.x : b.bx, bossM ? bossM.y : b.by); ctx.lineTo(b.tx, b.ty); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(b.tx, b.ty, 14 + frac * 18, 0, Math.PI*2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  // Draw slow/weaken indicators on monsters
+  if (this.slowUntil || this.weakenUntil) {
+    var nowD2 = Date.now();
+    this.mons.forEach(function(m) {
+      if (m.dead) return;
+      if (self.slowUntil && nowD2 < self.slowUntil) {
+        ctx.globalAlpha = 0.5; ctx.strokeStyle = '#88ddff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(m.x, m.y, 20, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      if (self.weakenUntil && nowD2 < self.weakenUntil) {
+        ctx.globalAlpha = 0.5; ctx.strokeStyle = '#cc88ff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(m.x, m.y, 22, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+    });
+  }
+
   var p = this.p;
+  var charEmoji = this.charDef ? this.charDef.e : '🐻';
   if (!(p.inv > 0 && Math.floor(p.inv/80) % 2 === 0)) {
     ctx.save();
     if (p.dir === -1) { ctx.scale(-1, 1); ctx.translate(-canvas.width, 0); }
     var px2 = p.dir === -1 ? canvas.width - p.x : p.x;
     ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🐻', px2, p.y);
+    ctx.fillText(charEmoji, px2, p.y);
+    if (this.blastReady) {
+      ctx.globalAlpha = 0.6 + 0.4 * Math.abs(Math.sin(Date.now() / 180));
+      ctx.font = '12px serif'; ctx.fillText('💥', px2 + 20, p.y - 20);
+      ctx.globalAlpha = 1;
+    }
     if (p.atk && this.aa > 0) { ctx.font = '16px serif'; ctx.fillText('⚔️', px2+24, p.y-8); }
     ctx.restore();
   }
@@ -1543,8 +1762,9 @@ function metaReturn(won) {
   document.getElementById('gov').style.display = 'none';
   document.getElementById('wov').style.display = 'none';
   if (!G) { if (window.showHub) window.showHub(); return; }
+  if (G.isBossRun) { if (window.showHub) window.showHub(); return; }
   if (window.META_onRunEnd) {
-    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0, { monstersKilled: G.monstersKilled||0, wallsBroken: G.wallsBroken||0, volcanoGems: G.volcanoGems||0 });
+    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0, { monstersKilled: G.monstersKilled||0, wallsBroken: G.wallsBroken||0, volcanoGems: G.volcanoGems||0, digRubies: G.digRubies||0 });
   } else {
     restart();
   }
@@ -1577,7 +1797,19 @@ window.META_startGame = function (config, homePets) {
     if (config.petluck)      G.upg.petluck += config.petluck * 2;
     for (var i = 0; i < (config.potion || 0); i++) { G.p.mhp += 30; G.p.hp = Math.min(G.p.hp + 30, G.p.mhp); }
     if (config.weaponDmg)   { G.weaponDmg = config.weaponDmg; G.weaponRange = config.weaponRange; G.weaponLevel = config.weaponLevel || 1; G.weaponColor = config.weaponColor || '#fff'; }
+    if (config.character) {
+      var chars = window.CHARACTERS || [];
+      for (var ci = 0; ci < chars.length; ci++) { if (chars[ci].id === config.character) { G.charDef = chars[ci]; break; } }
+    }
   }
+  applyHomePets(homePets);
+};
+
+window.META_startBossGame = function(homePets, charDef) {
+  G = new Game();
+  G.isBossRun = true;
+  G.charDef = charDef || null;
+  G.buildBossLevel();
   applyHomePets(homePets);
 };
 

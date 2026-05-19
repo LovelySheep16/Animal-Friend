@@ -73,6 +73,120 @@
   ];
   window.SERVANTS = SERVANTS;
 
+  var CHARACTERS = [
+    // ── Bears (starter class — bear is free) ────────────────
+    {id:'brownbear',   e:'🐻', n:'Brown Bear',     cat:'🐻 Bears',      cost:0,    atkBonus:0,   blast:'damage', blastPow:1.0},
+    {id:'blackbear',   e:'🐻', n:'Black Bear',     cat:'🐻 Bears',      cost:80,   atkBonus:5,   blast:'heal',   blastPow:1.0},
+    {id:'grizzly',     e:'🐻', n:'Grizzly Bear',   cat:'🐻 Bears',      cost:200,  atkBonus:12,  blast:'slow',   blastPow:1.0},
+    {id:'cavebear',    e:'🐻', n:'Cave Bear',      cat:'🐻 Bears',      cost:400,  atkBonus:22,  blast:'weaken', blastPow:1.0},
+    {id:'kodiakbear',  e:'🐻', n:'Kodiak Bear',    cat:'🐻 Bears',      cost:700,  atkBonus:35,  blast:'dig',    blastPow:1.5},
+    {id:'spiritbear',  e:'🐻', n:'Spirit Bear',    cat:'🐻 Bears',      cost:1100, atkBonus:50,  blast:'damage', blastPow:2.0},
+    {id:'guardianbear',e:'🐻', n:'Guardian Bear',  cat:'🐻 Bears',      cost:1600, atkBonus:68,  blast:'heal',   blastPow:2.0},
+    {id:'ancientbear', e:'🐻', n:'Ancient Bear',   cat:'🐻 Bears',      cost:2200, atkBonus:88,  blast:'damage', blastPow:3.0},
+    {id:'titanbear',   e:'🐻', n:'Titan Bear',     cat:'🐻 Bears',      cost:3000, atkBonus:110, blast:'dig',    blastPow:3.0},
+    {id:'cosmicbear',  e:'🐻', n:'Cosmic Bear',    cat:'🐻 Bears',      cost:4000, atkBonus:140, blast:'damage', blastPow:5.0},
+    // ── Knights ─────────────────────────────────────────────
+    {id:'squire2',     e:'🛡️', n:'Squire',         cat:'⚔️ Knights',    cost:100,  atkBonus:8,   blast:'damage', blastPow:1.2},
+    {id:'soldier2',    e:'⚔️', n:'Soldier',        cat:'⚔️ Knights',    cost:200,  atkBonus:16,  blast:'damage', blastPow:1.4},
+    {id:'knight2',     e:'🏇', n:'Knight',         cat:'⚔️ Knights',    cost:350,  atkBonus:26,  blast:'damage', blastPow:1.6},
+    {id:'elitek',      e:'⚔️', n:'Elite Knight',   cat:'⚔️ Knights',    cost:550,  atkBonus:38,  blast:'damage', blastPow:1.8},
+    {id:'champ2',      e:'🏆', n:'Champion',       cat:'⚔️ Knights',    cost:800,  atkBonus:52,  blast:'damage', blastPow:2.0},
+    {id:'warlord2',    e:'🗡️', n:'Warlord',        cat:'⚔️ Knights',    cost:1100, atkBonus:68,  blast:'damage', blastPow:2.5},
+    {id:'hero2',       e:'🦸', n:'Hero',           cat:'⚔️ Knights',    cost:1500, atkBonus:86,  blast:'damage', blastPow:3.0},
+    {id:'legend2',     e:'👑', n:'Legend',         cat:'⚔️ Knights',    cost:2000, atkBonus:106, blast:'damage', blastPow:3.5},
+    {id:'crusader',    e:'⚜️', n:'Crusader',       cat:'⚔️ Knights',    cost:2600, atkBonus:130, blast:'damage', blastPow:4.0},
+    {id:'eternalk2',   e:'✨', n:'Eternal Knight', cat:'⚔️ Knights',    cost:3500, atkBonus:160, blast:'damage', blastPow:5.0},
+    // ── Archers ──────────────────────────────────────────────
+    {id:'hunter',      e:'🏹', n:'Hunter',         cat:'🏹 Archers',    cost:75,   atkBonus:6,   blast:'slow',   blastPow:1.0},
+    {id:'scout',       e:'🏹', n:'Scout',          cat:'🏹 Archers',    cost:160,  atkBonus:14,  blast:'slow',   blastPow:1.2},
+    {id:'ranger2',     e:'🏹', n:'Ranger',         cat:'🏹 Archers',    cost:280,  atkBonus:24,  blast:'slow',   blastPow:1.4},
+    {id:'tracker',     e:'🏹', n:'Tracker',        cat:'🏹 Archers',    cost:440,  atkBonus:36,  blast:'slow',   blastPow:1.6},
+    {id:'sharpshot',   e:'🎯', n:'Sharpshooter',   cat:'🏹 Archers',    cost:640,  atkBonus:50,  blast:'slow',   blastPow:2.0},
+    {id:'woodsman',    e:'🌲', n:'Woodsman',       cat:'🏹 Archers',    cost:880,  atkBonus:66,  blast:'slow',   blastPow:2.5},
+    {id:'bladedancer', e:'🏹', n:'Blade Dancer',   cat:'🏹 Archers',    cost:1200, atkBonus:84,  blast:'slow',   blastPow:3.0},
+    {id:'windwalker',  e:'💨', n:'Wind Walker',    cat:'🏹 Archers',    cost:1600, atkBonus:104, blast:'slow',   blastPow:3.5},
+    {id:'skyarcher',   e:'☁️', n:'Sky Archer',     cat:'🏹 Archers',    cost:2100, atkBonus:128, blast:'slow',   blastPow:4.0},
+    {id:'godbow',      e:'🌟', n:'God Bow',        cat:'🏹 Archers',    cost:2800, atkBonus:158, blast:'slow',   blastPow:5.0},
+    // ── Wizards ──────────────────────────────────────────────
+    {id:'apprentice2', e:'🪄', n:'Apprentice',     cat:'🧙 Wizards',    cost:90,   atkBonus:7,   blast:'weaken', blastPow:1.0},
+    {id:'mage2',       e:'🔮', n:'Mage',           cat:'🧙 Wizards',    cost:180,  atkBonus:15,  blast:'weaken', blastPow:1.2},
+    {id:'sorcerer2',   e:'🌙', n:'Sorcerer',       cat:'🧙 Wizards',    cost:320,  atkBonus:25,  blast:'weaken', blastPow:1.4},
+    {id:'warlock2',    e:'🌑', n:'Warlock',        cat:'🧙 Wizards',    cost:500,  atkBonus:37,  blast:'weaken', blastPow:1.6},
+    {id:'archmage2',   e:'📖', n:'Archmage',       cat:'🧙 Wizards',    cost:720,  atkBonus:51,  blast:'weaken', blastPow:2.0},
+    {id:'enchanter2',  e:'✨', n:'Enchanter',      cat:'🧙 Wizards',    cost:1000, atkBonus:67,  blast:'weaken', blastPow:2.5},
+    {id:'spellbinder', e:'🌀', n:'Spell Binder',   cat:'🧙 Wizards',    cost:1350, atkBonus:85,  blast:'weaken', blastPow:3.0},
+    {id:'voidmage',    e:'🌑', n:'Void Mage',      cat:'🧙 Wizards',    cost:1800, atkBonus:106, blast:'weaken', blastPow:3.5},
+    {id:'stormwiz',    e:'⚡', n:'Storm Wizard',   cat:'🧙 Wizards',    cost:2400, atkBonus:130, blast:'weaken', blastPow:4.0},
+    {id:'cosmicmage2', e:'🌌', n:'Cosmic Mage',    cat:'🧙 Wizards',    cost:3200, atkBonus:160, blast:'weaken', blastPow:5.0},
+    // ── Witches ──────────────────────────────────────────────
+    {id:'hedgewitch2', e:'🌿', n:'Hedge Witch',    cat:'🧙 Witches',    cost:120,  atkBonus:8,   blast:'heal',   blastPow:1.0},
+    {id:'cauldrwitch', e:'🫙', n:'Cauldron Witch', cat:'🧙 Witches',    cost:240,  atkBonus:16,  blast:'heal',   blastPow:1.2},
+    {id:'shadowwitch', e:'🌑', n:'Shadow Witch',   cat:'🧙 Witches',    cost:400,  atkBonus:26,  blast:'heal',   blastPow:1.4},
+    {id:'moonsinger',  e:'🌙', n:'Moon Singer',    cat:'🧙 Witches',    cost:600,  atkBonus:38,  blast:'heal',   blastPow:1.6},
+    {id:'curseweaver', e:'🕸️', n:'Curse Weaver',   cat:'🧙 Witches',    cost:850,  atkBonus:52,  blast:'heal',   blastPow:2.0},
+    {id:'hexmaster',   e:'💜', n:'Hex Master',     cat:'🧙 Witches',    cost:1150, atkBonus:68,  blast:'heal',   blastPow:2.5},
+    {id:'spiritcallr', e:'👻', n:'Spirit Caller',  cat:'🧙 Witches',    cost:1550, atkBonus:86,  blast:'heal',   blastPow:3.0},
+    {id:'bloodmage',   e:'🩸', n:'Blood Mage',     cat:'🧙 Witches',    cost:2050, atkBonus:106, blast:'heal',   blastPow:3.5},
+    {id:'voidwitch',   e:'🌀', n:'Void Witch',     cat:'🧙 Witches',    cost:2700, atkBonus:130, blast:'heal',   blastPow:4.0},
+    {id:'grandwitch2', e:'🧙', n:'Grand Witch',    cat:'🧙 Witches',    cost:3600, atkBonus:160, blast:'heal',   blastPow:5.0},
+    // ── Smiths ───────────────────────────────────────────────
+    {id:'appsmith',    e:'🔧', n:'Apprentice Smith',cat:'⚒️ Smiths',    cost:60,   atkBonus:6,   blast:'dig',    blastPow:1.0},
+    {id:'tinker',      e:'⚙️', n:'Tinker',         cat:'⚒️ Smiths',     cost:130,  atkBonus:13,  blast:'dig',    blastPow:1.2},
+    {id:'forger',      e:'🔨', n:'Forger',         cat:'⚒️ Smiths',     cost:240,  atkBonus:22,  blast:'dig',    blastPow:1.4},
+    {id:'armorer',     e:'⚒️', n:'Armorer',        cat:'⚒️ Smiths',     cost:380,  atkBonus:33,  blast:'dig',    blastPow:1.6},
+    {id:'mastersmith', e:'🔨', n:'Master Smith',   cat:'⚒️ Smiths',     cost:560,  atkBonus:46,  blast:'dig',    blastPow:2.0},
+    {id:'runesmith',   e:'🪄', n:'Rune Smith',     cat:'⚒️ Smiths',     cost:780,  atkBonus:61,  blast:'dig',    blastPow:2.5},
+    {id:'artificer',   e:'⚙️', n:'Artificer',      cat:'⚒️ Smiths',     cost:1050, atkBonus:78,  blast:'dig',    blastPow:3.0},
+    {id:'goldsmith',   e:'⭐', n:'Gold Smith',     cat:'⚒️ Smiths',     cost:1380, atkBonus:97,  blast:'dig',    blastPow:3.5},
+    {id:'legendsmith', e:'✨', n:'Legend Smith',   cat:'⚒️ Smiths',     cost:1800, atkBonus:120, blast:'dig',    blastPow:4.0},
+    {id:'godsmith',    e:'👑', n:'God Smith',      cat:'⚒️ Smiths',     cost:2400, atkBonus:150, blast:'dig',    blastPow:5.0},
+    // ── Rangers ──────────────────────────────────────────────
+    {id:'pathfinder',  e:'🌿', n:'Pathfinder',     cat:'🌿 Rangers',    cost:80,   atkBonus:7,   blast:'slow',   blastPow:1.1},
+    {id:'stalker',     e:'🦅', n:'Stalker',        cat:'🌿 Rangers',    cost:160,  atkBonus:15,  blast:'slow',   blastPow:1.3},
+    {id:'beastmaster', e:'🐾', n:'Beast Master',   cat:'🌿 Rangers',    cost:290,  atkBonus:25,  blast:'slow',   blastPow:1.5},
+    {id:'trapper',     e:'🕸️', n:'Trapper',        cat:'🌿 Rangers',    cost:450,  atkBonus:37,  blast:'slow',   blastPow:1.7},
+    {id:'forestrngr',  e:'🌲', n:'Forest Ranger',  cat:'🌿 Rangers',    cost:640,  atkBonus:51,  blast:'slow',   blastPow:2.0},
+    {id:'moonranger',  e:'🌙', n:'Moon Ranger',    cat:'🌿 Rangers',    cost:880,  atkBonus:67,  blast:'slow',   blastPow:2.5},
+    {id:'wildhunter',  e:'🐺', n:'Wild Hunter',    cat:'🌿 Rangers',    cost:1170, atkBonus:85,  blast:'slow',   blastPow:3.0},
+    {id:'shadowrngr',  e:'🌑', n:'Shadow Ranger',  cat:'🌿 Rangers',    cost:1530, atkBonus:105, blast:'slow',   blastPow:3.5},
+    {id:'stormranger', e:'⛈️', n:'Storm Ranger',   cat:'🌿 Rangers',    cost:2000, atkBonus:130, blast:'slow',   blastPow:4.0},
+    {id:'legendrngr',  e:'🌟', n:'Legend Ranger',  cat:'🌿 Rangers',    cost:2700, atkBonus:160, blast:'slow',   blastPow:5.0},
+    // ── Paladins ─────────────────────────────────────────────
+    {id:'initiate',    e:'🙏', n:'Initiate',       cat:'✝️ Paladins',   cost:150,  atkBonus:10,  blast:'heal',   blastPow:1.2},
+    {id:'cleric',      e:'✝️', n:'Cleric',         cat:'✝️ Paladins',   cost:280,  atkBonus:20,  blast:'heal',   blastPow:1.4},
+    {id:'friar',       e:'🙏', n:'Friar',          cat:'✝️ Paladins',   cost:450,  atkBonus:32,  blast:'heal',   blastPow:1.6},
+    {id:'paladin2',    e:'⚔️', n:'Paladin',        cat:'✝️ Paladins',   cost:660,  atkBonus:46,  blast:'heal',   blastPow:2.0},
+    {id:'templar',     e:'🛡️', n:'Templar',        cat:'✝️ Paladins',   cost:920,  atkBonus:62,  blast:'heal',   blastPow:2.5},
+    {id:'inquisitor',  e:'🌟', n:'Inquisitor',     cat:'✝️ Paladins',   cost:1240, atkBonus:80,  blast:'heal',   blastPow:3.0},
+    {id:'justicar',    e:'⚖️', n:'Justicar',       cat:'✝️ Paladins',   cost:1640, atkBonus:100, blast:'heal',   blastPow:3.5},
+    {id:'sunguard',    e:'☀️', n:'Sun Guard',      cat:'✝️ Paladins',   cost:2150, atkBonus:124, blast:'heal',   blastPow:4.0},
+    {id:'angelpaladin',e:'😇', n:'Angel Paladin',  cat:'✝️ Paladins',   cost:2800, atkBonus:150, blast:'heal',   blastPow:4.5},
+    {id:'holyavenger', e:'✨', n:'Holy Avenger',   cat:'✝️ Paladins',   cost:3800, atkBonus:185, blast:'heal',   blastPow:6.0},
+    // ── Assassins ────────────────────────────────────────────
+    {id:'cutpurse',    e:'🗡️', n:'Cutpurse',       cat:'🗡️ Assassins',  cost:110,  atkBonus:10,  blast:'damage', blastPow:1.5},
+    {id:'thief',       e:'🗡️', n:'Thief',          cat:'🗡️ Assassins',  cost:220,  atkBonus:20,  blast:'damage', blastPow:1.8},
+    {id:'rogue',       e:'🗡️', n:'Rogue',          cat:'🗡️ Assassins',  cost:370,  atkBonus:32,  blast:'damage', blastPow:2.0},
+    {id:'shadowblade', e:'🌑', n:'Shadow Blade',   cat:'🗡️ Assassins',  cost:570,  atkBonus:46,  blast:'damage', blastPow:2.3},
+    {id:'infiltrator', e:'🗡️', n:'Infiltrator',    cat:'🗡️ Assassins',  cost:810,  atkBonus:62,  blast:'damage', blastPow:2.6},
+    {id:'specter',     e:'👤', n:'Specter',        cat:'🗡️ Assassins',  cost:1100, atkBonus:80,  blast:'damage', blastPow:3.0},
+    {id:'deathblade',  e:'💀', n:'Death Blade',    cat:'🗡️ Assassins',  cost:1450, atkBonus:100, blast:'damage', blastPow:3.5},
+    {id:'shadowlord2', e:'🌑', n:'Shadow Lord',    cat:'🗡️ Assassins',  cost:1900, atkBonus:124, blast:'damage', blastPow:4.0},
+    {id:'voidblade',   e:'🌀', n:'Void Blade',     cat:'🗡️ Assassins',  cost:2500, atkBonus:150, blast:'damage', blastPow:4.5},
+    {id:'cosmicblade', e:'🌌', n:'Cosmic Blade',   cat:'🗡️ Assassins',  cost:3300, atkBonus:185, blast:'damage', blastPow:6.0},
+    // ── Berserkers ───────────────────────────────────────────
+    {id:'brute',       e:'😤', n:'Brute',          cat:'😤 Berserkers', cost:130,  atkBonus:12,  blast:'damage', blastPow:1.5},
+    {id:'raider',      e:'⚔️', n:'Raider',         cat:'😤 Berserkers', cost:260,  atkBonus:24,  blast:'damage', blastPow:1.8},
+    {id:'berserk',     e:'😡', n:'Berserker',      cat:'😤 Berserkers', cost:430,  atkBonus:38,  blast:'damage', blastPow:2.0},
+    {id:'ravager',     e:'💥', n:'Ravager',        cat:'😤 Berserkers', cost:650,  atkBonus:54,  blast:'damage', blastPow:2.3},
+    {id:'slayer',      e:'⚔️', n:'Slayer',         cat:'😤 Berserkers', cost:920,  atkBonus:72,  blast:'damage', blastPow:2.6},
+    {id:'warchief',    e:'🗡️', n:'War Chief',      cat:'😤 Berserkers', cost:1240, atkBonus:92,  blast:'damage', blastPow:3.0},
+    {id:'doomslayer',  e:'💀', n:'Doom Slayer',    cat:'😤 Berserkers', cost:1650, atkBonus:114, blast:'damage', blastPow:3.5},
+    {id:'warmonger',   e:'😤', n:'War Monger',     cat:'😤 Berserkers', cost:2150, atkBonus:140, blast:'damage', blastPow:4.0},
+    {id:'titanslayer', e:'🗿', n:'Titan Slayer',   cat:'😤 Berserkers', cost:2800, atkBonus:170, blast:'damage', blastPow:4.5},
+    {id:'godslayer',   e:'⚡', n:'God Slayer',     cat:'😤 Berserkers', cost:3800, atkBonus:210, blast:'damage', blastPow:6.0},
+  ];
+  window.CHARACTERS = CHARACTERS;
+
   var DRAGON_TYPES = {
     aquarium: { e:'💧', n:'Sea Dragon',     rubyPerDay:3  },
     forest:   { e:'🍃', n:'Forest Dragon',  rubyPerDay:5  },
@@ -316,6 +430,9 @@
     if (!acc.dragonEggs)        acc.dragonEggs        = [];
     if (!acc.dragons)           acc.dragons           = [];
     if (!acc.unlockedAwards)    acc.unlockedAwards    = [];
+    if (!acc.characters)        acc.characters        = ['brownbear'];
+    if (!acc.activeCharacter)   acc.activeCharacter   = 'brownbear';
+    if (!acc.lastBossRun)       acc.lastBossRun       = 0;
     if (!acc.stats) acc.stats = {
       runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
       totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
@@ -358,7 +475,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -455,10 +572,16 @@ function speciesCount(acc, petId) {
         if (!p) return;
         var cnt = owned[id] || 0;
         var has = cnt > 0;
-        html += '<div class="hab-pet-chip' + (has ? ' hab-pet-has' : ' hab-pet-no') + '" style="' + (has ? 'border-color:' + th.border + '88' : '') + '">';
+        var buyCost = p.cost * 20;
+        var canAfford = acc.rubies >= buyCost;
+        var chipCls = has ? 'hab-pet-has' : (canAfford ? 'hab-pet-buyable' : 'hab-pet-no');
+        html += '<div class="hab-pet-chip ' + chipCls + '" style="' + (has ? 'border-color:' + th.border + '88' : '') + '">';
         html += '<span class="hab-chip-emoji">' + p.e + '</span>';
         html += '<span class="hab-chip-name">' + p.n + '</span>';
         if (has) html += '<span class="hab-chip-count" style="color:' + th.border + '">×' + cnt + '</span>';
+        html += '<button class="hab-buy-btn' + (canAfford ? '' : ' hab-buy-cant') + '"' +
+          (canAfford ? ' onclick="buyHabitatPet(\'' + id + '\')"' : ' disabled') + '>' +
+          (has ? '+1 · ' : 'Buy · ') + buyCost + '🔴</button>';
         html += '</div>';
       });
       html += '</div></div>';
@@ -466,6 +589,127 @@ function speciesCount(acc, petId) {
 
     document.getElementById('habitats-grid').innerHTML = html;
     showScreen('screen-habitats');
+  };
+
+  window.buyHabitatPet = function(id) {
+    var acc = ensureItems(getAccount());
+    var pets = window.PETS || [];
+    var petDef = null;
+    for (var i = 0; i < pets.length; i++) { if (pets[i].id === id) { petDef = pets[i]; break; } }
+    if (!petDef) return;
+    var cost = petDef.cost * 20;
+    if (acc.rubies < cost) return;
+    if (speciesCount(acc, id) >= 30) return;
+    acc.rubies -= cost;
+    acc.stats.rubiesSpent += cost;
+    acc.homePets.push({ id:petDef.id, e:petDef.e, n:petDef.n, cat:petDef.cat||'',
+      heal:petDef.heal||0, hi:petDef.hi||0, atk:petDef.atk||0, ar:petDef.ar||0, sc:petDef.sc||0, d:petDef.d||'' });
+    acc.stats.totalPetsHome += 1;
+    if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    checkAwards(acc);
+    saveAccount(acc);
+    window.showHabitats();
+  };
+
+  // ── Characters ────────────────────────────────────────────
+  var BLAST_LABELS = { damage:'💥 Blast Dmg', slow:'❄️ Slow All', weaken:'⬇️ Weaken', heal:'❤️ Heal All', dig:'⛏️ Dig Rubies' };
+
+  window.showCharacters = function() {
+    var acc = ensureItems(getAccount());
+    document.getElementById('char-rubies').textContent = acc.rubies + ' 🔴';
+    var chars = window.CHARACTERS || [];
+    var owned = acc.characters || ['brownbear'];
+    var active = acc.activeCharacter || 'brownbear';
+    var cats = {}, catOrder = [];
+    chars.forEach(function(c) {
+      if (!cats[c.cat]) { cats[c.cat] = []; catOrder.push(c.cat); }
+      cats[c.cat].push(c);
+    });
+    var html = '';
+    catOrder.forEach(function(cat) {
+      html += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
+      cats[cat].forEach(function(c) {
+        var isOwned  = owned.indexOf(c.id) >= 0;
+        var isActive = active === c.id;
+        var canBuy   = acc.rubies >= c.cost && !isOwned;
+        var safeId   = c.id.replace(/'/g, "\\'");
+        html += '<div class="weapon-item char-item' + (isActive ? ' weapon-active' : '') + '">';
+        html += '<div class="weapon-emoji">' + c.e + '</div>';
+        html += '<div class="weapon-name">' + c.n + '</div>';
+        html += '<div class="weapon-stats">+' + c.atkBonus + ' atk &nbsp; ' + BLAST_LABELS[c.blast] + '</div>';
+        if (isOwned) {
+          html += '<div class="weapon-level" style="color:#a0d0ff">Owned</div>';
+        }
+        html += '<div class="weapon-btns">';
+        if (!isOwned) {
+          html += '<button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
+            (canBuy ? ' onclick="buyCharacter(\'' + safeId + '\')"' : ' disabled') + '>' +
+            (c.cost === 0 ? 'Free' : 'Buy ' + c.cost + '🔴') + '</button>';
+        } else {
+          html += '<button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipCharacter(\'' + safeId + '\')">' +
+            (isActive ? '✓ Playing' : 'Play') + '</button>';
+        }
+        html += '</div></div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById('char-grid').innerHTML = html;
+    showScreen('screen-characters');
+  };
+
+  window.buyCharacter = function(id) {
+    var acc = ensureItems(getAccount());
+    var chars = window.CHARACTERS || [];
+    var c = null;
+    for (var i = 0; i < chars.length; i++) { if (chars[i].id === id) { c = chars[i]; break; } }
+    if (!c || acc.rubies < c.cost) return;
+    if ((acc.characters || []).indexOf(id) >= 0) return;
+    acc.rubies -= c.cost;
+    acc.stats.rubiesSpent += c.cost;
+    acc.characters.push(id);
+    checkAwards(acc);
+    saveAccount(acc);
+    window.showCharacters();
+  };
+
+  window.equipCharacter = function(id) {
+    var acc = ensureItems(getAccount());
+    if ((acc.characters || []).indexOf(id) < 0) return;
+    acc.activeCharacter = id;
+    saveAccount(acc);
+    window.showCharacters();
+  };
+
+  // ── Boss Run ──────────────────────────────────────────────
+  window.playBossRun = function() {
+    var acc = ensureItems(getAccount());
+    var NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
+    var remaining = NINETY_DAYS - (Date.now() - (acc.lastBossRun || 0));
+    if (remaining > 0) {
+      alert('⏳ Boss cooldown: ' + dragonTimeLeft(remaining) + ' remaining.\nYou can only challenge the Cosmic Terror once every 90 days!');
+      return;
+    }
+    acc.lastBossRun = Date.now();
+    saveAccount(acc);
+    showScreen('game');
+    var charDef = null;
+    var chars = window.CHARACTERS || [];
+    var cid = acc.activeCharacter || 'brownbear';
+    for (var i = 0; i < chars.length; i++) { if (chars[i].id === cid) { charDef = chars[i]; break; } }
+    if (window.META_startBossGame) window.META_startBossGame(acc.homePets || [], charDef);
+  };
+
+  window.META_onBossWin = function() {
+    var acc = ensureItems(getAccount());
+    acc.rubies += 10000;
+    acc.stats.rubiesEarned += 10000;
+    if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    checkAwards(acc);
+    saveAccount(acc);
+    var wov = document.getElementById('wov');
+    wov.querySelector('.otitle').textContent = '🌠 BOSS DEFEATED!';
+    document.getElementById('wscore').textContent = '+10,000 🔴 Rubies!';
+    wov.style.display = 'flex';
   };
 
   // ── Hub ───────────────────────────────────────────────────────────────────
@@ -608,7 +852,8 @@ function speciesCount(acc, petId) {
     var boostsCount = (acc.shopItems.speed||0)+(acc.shopItems.attack||0)+(acc.shopItems.petluck||0)+(acc.shopItems.potion||0);
     acc.stats.boostsUsed += boostsCount;
     var config = Object.assign({ speed: acc.shopItems.speed||0, attack: acc.shopItems.attack||0,
-                   petluck: acc.shopItems.petluck||0, potion: acc.shopItems.potion||0 }, wc);
+                   petluck: acc.shopItems.petluck||0, potion: acc.shopItems.potion||0,
+                   character: acc.activeCharacter || 'brownbear' }, wc);
     acc.shopItems = { speed:0, attack:0, petluck:0, potion:0 };
     saveAccount(acc);
     showScreen('game');
@@ -622,7 +867,9 @@ function speciesCount(acc, petId) {
     var perfBonus = Math.floor((score || 0) / 500);
     // Gem conversion: 1/20 of gems become rubies
     var gemRubies = Math.floor((gems || 0) / 20);
-    var totalRubies = perfBonus + gemRubies;
+    // Dig blast bonus rubies
+    var digRubies = (runStats && runStats.digRubies) || 0;
+    var totalRubies = perfBonus + gemRubies + digRubies;
     acc.rubies += totalRubies;
     // Stats tracking
     acc.stats.runsPlayed++;
@@ -668,7 +915,7 @@ function speciesCount(acc, petId) {
     titleEl.style.color = '#ff5050';
     document.getElementById('result-level').textContent  = 'Level reached: ' + level;
     document.getElementById('result-rubies').textContent =
-      '+' + totalRubies + ' 🔴  (score bonus: ' + perfBonus + '  ·  gems→rubies: ' + gemRubies + ')' +
+      '+' + totalRubies + ' 🔴  (score: ' + perfBonus + '  ·  gems: ' + gemRubies + (digRubies ? '  ·  ⛏️ dig: ' + digRubies : '') + ')' +
       (eggsGot ? '  ·  🥚 ×' + eggsGot + ' dragon egg' + (eggsGot > 1 ? 's' : '') + '!' : '') +
       (newAwards.length ? '  ·  🏅 ' + newAwards.length + ' award' + (newAwards.length>1?'s':'') + '!' : '');
     var petsEl = document.getElementById('result-pets');

@@ -649,6 +649,29 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 .award-ruby{color:#ffd700;font-size:11px;font-weight:bold;}
 .award-item.award-done .award-ruby{color:#44ff88;}
 
+/* ── Habitat buy buttons ──────────────────────────────────── */
+.hab-pet-buyable{border-color:#5030a0;background:rgba(40,10,90,0.55);}
+.hab-buy-btn{
+  font-size:9px;padding:2px 6px;border-radius:4px;margin-left:3px;
+  background:rgba(100,30,180,0.8);border:1px solid #8040c8;
+  color:#ffd700;cursor:pointer;font-family:'Courier New',monospace;
+  white-space:nowrap;line-height:1.4;
+}
+.hab-buy-btn:hover{background:rgba(140,50,220,0.9);}
+.hab-buy-cant{opacity:0.4;cursor:not-allowed;}
+.hab-buy-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ── Characters screen ────────────────────────────────────── */
+.char-item{cursor:default;}
+.char-item .weapon-stats{color:#80b0ff;font-size:10px;}
+
+/* ── Boss Fight button ────────────────────────────────────── */
+.hub-boss-btn{border-color:#00aadd!important;background:rgba(0,30,80,0.9)!important;}
+.hub-boss-btn:hover{border-color:#00ddff!important;background:rgba(0,50,110,0.9)!important;box-shadow:0 4px 20px rgba(0,200,255,0.45)!important;}
+.hub-boss-btn .hab-icon{text-shadow:0 0 12px rgba(0,220,255,0.8);}
+.hub-boss-btn .hab-label{color:#88ddff!important;}
+.hub-boss-btn .hab-desc{color:#4499aa!important;}
+
 /* ── Result awards ────────────────────────────────────────── */
 .result-awards{margin-top:10px;text-align:center;}
 .result-award{
