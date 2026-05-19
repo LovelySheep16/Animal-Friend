@@ -434,6 +434,7 @@
     if (!acc.characters)        acc.characters        = ['brownbear'];
     if (!acc.activeCharacter)   acc.activeCharacter   = 'brownbear';
     if (!acc.lastBossRun)       acc.lastBossRun       = 0;
+    if (!acc.bossKills)         acc.bossKills         = 0;
     if (!acc.stats) acc.stats = {
       runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
       totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
@@ -697,7 +698,7 @@ function speciesCount(acc, petId) {
     var chars = window.CHARACTERS || [];
     var cid = acc.activeCharacter || 'brownbear';
     for (var i = 0; i < chars.length; i++) { if (chars[i].id === cid) { charDef = chars[i]; break; } }
-    if (window.META_startBossGame) window.META_startBossGame(acc.homePets || [], charDef);
+    if (window.META_startBossGame) window.META_startBossGame(acc.homePets || [], charDef, acc.bossKills || 0);
   };
 
   window.META_onBossWin = function() {
@@ -705,11 +706,13 @@ function speciesCount(acc, petId) {
     acc.rubies += 10000;
     acc.stats.rubiesEarned += 10000;
     if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    acc.bossKills = (acc.bossKills || 0) + 1;
     checkAwards(acc);
     saveAccount(acc);
+    var nextScale = Math.pow(2, acc.bossKills);
     var wov = document.getElementById('wov');
     wov.querySelector('.otitle').textContent = '🌠 BOSS DEFEATED!';
-    document.getElementById('wscore').textContent = '+10,000 🔴 Rubies!';
+    document.getElementById('wscore').textContent = '+10,000 🔴  ·  Next: ' + nextScale + 'x stronger!';
     wov.style.display = 'flex';
   };
 

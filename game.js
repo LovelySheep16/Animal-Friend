@@ -391,7 +391,7 @@ function Game() {
   // Characters & blast
   this.charDef = null; this.blastCharge = 0; this.blastReady = false; this.digRubies = 0;
   // Boss run
-  this.isBossRun = false; this.bossLasers = [];
+  this.isBossRun = false; this.bossLasers = []; this.bossKills = 0; this.bossPetDmg = 10;
   // Debuffs (applied by blasts)
   this.slowUntil = 0; this.weakenUntil = 0;
   this.build(); this.showBanner();
@@ -583,9 +583,14 @@ Game.prototype.buildBossLevel = function() {
   }
   this.wallHp = {};
   this.p = {x: T*3, y: GT+T*3, hp: 100, mhp: 100, atk: false, at: 0, dir: 1, inv: 0};
-  this.ld = { name: '🌠 COSMIC LAIR — Boss Fight', zone: {b:'#02000a', w:'#1a0040', f:'#08000f', flag:'🌠', n:'Cosmic Lair'}, pool: [], count: 0, li: 0, loop: 0 };
+  var scale = Math.pow(2, this.bossKills || 0);
+  var bossHp  = Math.round(10000 * scale);
+  var bossAtk = Math.round(50    * scale);
+  this.bossPetDmg = Math.round(10 * scale);
+  var gen = this.bossKills > 0 ? ' (Gen ' + (this.bossKills + 1) + ' · ' + scale + 'x)' : '';
+  this.ld = { name: '🌠 COSMIC LAIR — Boss Fight' + gen, zone: {b:'#02000a', w:'#1a0040', f:'#08000f', flag:'🌠', n:'Cosmic Lair'}, pool: [], count: 0, li: 0, loop: 0 };
   var bx = Math.round(canvas.width * 0.7), by = Math.round(GT + GH * 0.5);
-  this.mons = [{ t:'Cosmic Terror', e:'🌠', hp:10000, mhp:10000, atk:50, spd:45, gem:0,
+  this.mons = [{ t:'Cosmic Terror', e:'🌠', hp:bossHp, mhp:bossHp, atk:bossAtk, spd:45, gem:0,
     x:bx, y:by, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isBoss:true, laserTimer:2000 }];
   this.bossLasers = []; this.chest = null; this.chestPet = null; this.alreadyOwned = true;
   this.volcano = null; this.lavaBlasts = []; this.gemChests = []; this.boxes = [];
@@ -604,7 +609,7 @@ Game.prototype.buildBossLevel = function() {
 };
 
 Game.prototype.updateBossLasers = function(now) {
-  var self = this, p = this.p, LASER_DMG = 50, LASER_PET_DMG = 10;
+  var self = this, p = this.p, LASER_DMG = 50, LASER_PET_DMG = this.bossPetDmg || 10;
   this.bossLasers = this.bossLasers.filter(function(b) {
     if (b.done) return false;
     if (now < b.warnUntil) return true;
@@ -955,7 +960,7 @@ Game.prototype.update = function(dt) {
       if (m.pat <= 0) {
         var nearBP = null, nearBPD = 44;
         self.pets.forEach(function(pet) { if (!pet.dead && pet.x !== undefined) { var d = Math.hypot(m.x-pet.x, m.y-pet.y); if (d < nearBPD) { nearBP = pet; nearBPD = d; } } });
-        if (nearBP) { m.pat = 1400; var mAtkP = 10; nearBP.hp = Math.max(0, nearBP.hp - mAtkP); self.fl(nearBP.x, nearBP.y-8, '-'+mAtkP, '#ff6644'); if (nearBP.hp <= 0) self.killPet(nearBP); }
+        if (nearBP) { m.pat = 1400; var mAtkP = self.bossPetDmg || 10; nearBP.hp = Math.max(0, nearBP.hp - mAtkP); self.fl(nearBP.x, nearBP.y-8, '-'+mAtkP, '#ff6644'); if (nearBP.hp <= 0) self.killPet(nearBP); }
       }
       // Fire lasers
       m.laserTimer = (m.laserTimer || 3000) - dt*1000;
@@ -1813,11 +1818,12 @@ window.META_startGame = function (config, homePets) {
   applyHomePets(homePets);
 };
 
-window.META_startBossGame = function(homePets, charDef) {
+window.META_startBossGame = function(homePets, charDef, bossKills) {
   G = new Game();
   resetGameUI();
   G.isBossRun = true;
   G.charDef = charDef || null;
+  G.bossKills = bossKills || 0;
   G.buildBossLevel();
   applyHomePets(homePets);
 };
