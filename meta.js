@@ -419,6 +419,7 @@
   }
 
   function ensureItems(acc) {
+    if (!acc) acc = {};
     if (!acc.shopItems)    acc.shopItems    = { speed:0, attack:0, petluck:0, potion:0 };
     if (!acc.homePets)     acc.homePets     = [];
     if (!acc.rubies)       acc.rubies       = 0;

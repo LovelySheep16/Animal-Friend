@@ -604,7 +604,7 @@ Game.prototype.buildBossLevel = function() {
 };
 
 Game.prototype.updateBossLasers = function(now) {
-  var self = this, p = this.p, LASER_DMG = 50, LASER_PET_PCT = 0.30;
+  var self = this, p = this.p, LASER_DMG = 50, LASER_PET_DMG = 10;
   this.bossLasers = this.bossLasers.filter(function(b) {
     if (b.done) return false;
     if (now < b.warnUntil) return true;
@@ -619,9 +619,8 @@ Game.prototype.updateBossLasers = function(now) {
     self.pets.forEach(function(pt) {
       if (pt.dead || pt.x === undefined) return;
       if (Math.hypot(pt.x - b.tx, pt.y - b.ty) < 34) {
-        var pdmg = pt.mhp ? Math.round(pt.mhp * LASER_PET_PCT) : LASER_DMG;
-        pt.hp = Math.max(0, pt.hp - pdmg);
-        self.fl(pt.x, pt.y, '-' + pdmg + '⚡', '#00ffff');
+        pt.hp = Math.max(0, pt.hp - LASER_PET_DMG);
+        self.fl(pt.x, pt.y, '-' + LASER_PET_DMG + '⚡', '#00ffff');
         if (pt.hp <= 0) self.killPet(pt);
       }
     });
@@ -956,7 +955,7 @@ Game.prototype.update = function(dt) {
       if (m.pat <= 0) {
         var nearBP = null, nearBPD = 44;
         self.pets.forEach(function(pet) { if (!pet.dead && pet.x !== undefined) { var d = Math.hypot(m.x-pet.x, m.y-pet.y); if (d < nearBPD) { nearBP = pet; nearBPD = d; } } });
-        if (nearBP) { m.pat = 1400; var mAtkP = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk*0.5) : m.atk; nearBP.hp = Math.max(0, nearBP.hp - mAtkP); self.fl(nearBP.x, nearBP.y-8, '-'+mAtkP, '#ff6644'); if (nearBP.hp <= 0) self.killPet(nearBP); }
+        if (nearBP) { m.pat = 1400; var mAtkP = 10; nearBP.hp = Math.max(0, nearBP.hp - mAtkP); self.fl(nearBP.x, nearBP.y-8, '-'+mAtkP, '#ff6644'); if (nearBP.hp <= 0) self.killPet(nearBP); }
       }
       // Fire lasers
       m.laserTimer = (m.laserTimer || 3000) - dt*1000;
@@ -1789,8 +1788,17 @@ function applyHomePets(homePets) {
   });
 }
 
+function resetGameUI() {
+  document.getElementById('ov').style.display  = 'none';
+  document.getElementById('gov').style.display = 'none';
+  document.getElementById('wov').style.display = 'none';
+  document.getElementById('touch-atk').style.display  = '';
+  document.getElementById('touch-shop').style.display = '';
+}
+
 window.META_startGame = function (config, homePets) {
   G = new Game();
+  resetGameUI();
   if (config) {
     if (config.speed)        G.upg.speed   += config.speed;
     if (config.attack)       G.upg.attack  += config.attack  * 2;
@@ -1807,6 +1815,7 @@ window.META_startGame = function (config, homePets) {
 
 window.META_startBossGame = function(homePets, charDef) {
   G = new Game();
+  resetGameUI();
   G.isBossRun = true;
   G.charDef = charDef || null;
   G.buildBossLevel();
