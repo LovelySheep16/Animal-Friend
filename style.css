@@ -251,6 +251,8 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 }
 #audio-btn:active{transform:scale(0.88);}
 #audio-btn span{font-size:9px;font-weight:bold;letter-spacing:1px;opacity:0.9;font-family:'Courier New',monospace;}
+#audio-btn.in-game { position:absolute; bottom:max(18px,env(safe-area-inset-bottom)); right:256px; }
+#audio-btn.in-game + #audio-panel { right:256px; }
 #audio-panel {
   position:fixed;bottom:96px;right:18px;z-index:200;
   background:rgba(20,5,50,0.97);border:1px solid #7040c0;border-radius:14px;
@@ -527,6 +529,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   #touch-atk  { width:80px; height:80px; font-size:28px; right:10px; }
   #touch-shop { width:80px; height:80px; font-size:28px; right:100px; }
   #food-btn   { width:80px; height:80px; font-size:28px; right:190px; }
+  #audio-btn.in-game { width:80px; height:80px; font-size:28px; right:280px; }
 
   /* ── Weapon / Servant grids ── */
   .weapon-cat-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
@@ -571,6 +574,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   #touch-atk  { width:72px; height:72px; right:8px; }
   #touch-shop { width:72px; height:72px; right:90px; }
   #food-btn   { width:72px; height:72px; right:172px; }
+  #audio-btn.in-game { width:72px; height:72px; right:254px; }
   .meta-title { font-size:17px; }
   .weapon-cat-grid { grid-template-columns:1fr 1fr; }
 }

@@ -1880,7 +1880,7 @@ function resetGameUI() {
   document.getElementById('touch-atk').style.display  = '';
   document.getElementById('touch-shop').style.display = '';
   document.getElementById('food-btn').style.display   = '';
-  var ab = document.getElementById('audio-btn');   if (ab) ab.style.display = 'none';
+  var ab = document.getElementById('audio-btn');   if (ab) { ab.style.display = ''; ab.classList.add('in-game'); }
   var ap = document.getElementById('audio-panel'); if (ap) ap.classList.remove('open');
 }
 

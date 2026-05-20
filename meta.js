@@ -622,7 +622,7 @@ function speciesCount(acc, petId) {
     } else {
       var el = document.getElementById(id);
       if (el) el.style.display = 'flex';
-      var ab2 = document.getElementById('audio-btn'); if (ab2) ab2.style.display = '';
+      var ab2 = document.getElementById('audio-btn'); if (ab2) { ab2.style.display = ''; ab2.classList.remove('in-game'); }
     }
     var ap = document.getElementById('audio-panel'); if (ap) ap.classList.remove('open');
     if (window.playScreenMusic) window.playScreenMusic(id);
