@@ -622,6 +622,7 @@ function speciesCount(acc, petId) {
       var el = document.getElementById(id);
       if (el) el.style.display = 'flex';
     }
+    if (window.playScreenMusic) window.playScreenMusic(id);
   }
 
 

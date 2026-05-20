@@ -1871,6 +1871,7 @@ function resetGameUI() {
 window.META_startGame = function (config, homePets) {
   G = new Game();
   resetGameUI();
+  if (window.playScreenMusic) window.playScreenMusic('game');
   if (config) {
     if (config.speed)        G.upg.speed   += config.speed;
     if (config.attack)       G.upg.attack  += config.attack  * 2;
@@ -1888,6 +1889,7 @@ window.META_startGame = function (config, homePets) {
 window.META_startBossGame = function(homePets, charDef, bossKills) {
   G = new Game();
   resetGameUI();
+  if (window.playScreenMusic) window.playScreenMusic('game-boss');
   G.isBossRun = true;
   G.charDef = charDef || null;
   G.bossKills = bossKills || 0;
