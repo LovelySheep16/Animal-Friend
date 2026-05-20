@@ -5,39 +5,12 @@
   var SAVE_KEY = 'af_save';
   var _account = null;
 
-  // ── Online auth ────────────────────────────────────────────────────────────
-  var _authName  = null;
-  var _authToken = null;
-  var _savePend  = false;
-
-  function apiFetch(path, opts) {
-    opts = opts || {};
-    opts.headers = opts.headers || {};
-    if (_authName)  opts.headers['X-Name']  = _authName;
-    if (_authToken) opts.headers['X-Token'] = _authToken;
-    if (!opts.headers['Content-Type']) opts.headers['Content-Type'] = 'application/json';
-    return fetch(path, opts);
-  }
-  function isLoggedIn() { return !!(_authName && _authToken); }
-  function pingServer() {
-    if (!_authName) return;
-    fetch('/api/ping', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name:_authName }) }).catch(function(){});
-  }
-
   function loadAccount() {
     try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch(e) { return null; }
   }
   function saveAccount(acc) {
     _account = acc;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(acc)); } catch(e) {}
-    if (isLoggedIn() && !_savePend) {
-      _savePend = true;
-      setTimeout(function() {
-        _savePend = false;
-        if (!isLoggedIn()) return;
-        apiFetch('/api/save', { method:'POST', body:JSON.stringify({ gameData:_account }) }).catch(function(){});
-      }, 2000);
-    }
   }
   function getAccount() { return _account; }
 
@@ -657,7 +630,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-login','screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop','screen-subscription','screen-social','screen-leaderboard'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop','screen-subscription'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -1037,17 +1010,6 @@ function speciesCount(acc, petId) {
     document.getElementById('hub-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel;
     renderHomePets(acc.homePets);
-    var accRow = document.getElementById('hub-account');
-    var usernameEl = document.getElementById('hub-username');
-    if (accRow && usernameEl) {
-      if (isLoggedIn()) {
-        usernameEl.textContent = '👤 ' + _authName;
-        accRow.style.display = 'flex';
-      } else {
-        accRow.style.display = 'none';
-      }
-    }
-    pingServer();
     showScreen('screen-hub');
   }
   window.showHub = showHub;
@@ -1569,366 +1531,18 @@ function speciesCount(acc, petId) {
     window.showSubscription();
   };
 
-  // ── Auth / Login ──────────────────────────────────────────────────────────
-  function showLoginScreen() {
-    var msg = document.getElementById('login-msg');
-    if (msg) msg.textContent = '';
-    showScreen('screen-login');
-  }
-  window.showLoginScreen = showLoginScreen;
-
-  window.doLogin = function() {
-    var name = (document.getElementById('login-name').value || '').trim();
-    var pass = document.getElementById('login-pass').value || '';
-    var msg  = document.getElementById('login-msg');
-    if (!name || !pass) { msg.textContent = 'Enter name and password.'; return; }
-    msg.textContent = 'Logging in…';
-    fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name:name, password:pass }) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.ok) { msg.textContent = d.error || 'Login failed.'; return; }
-        _authName = d.name; _authToken = d.token;
-        localStorage.setItem('af_auth_name', d.name);
-        localStorage.setItem('af_auth_token', d.token);
-        var serverData = d.gameData || {};
-        var localAcc   = loadAccount() || {};
-        var useServer  = (serverData.highestLevel || 0) >= (localAcc.highestLevel || 0);
-        var acc = useServer ? serverData : localAcc;
-        ensureItems(acc); _account = acc;
-        localStorage.setItem(SAVE_KEY, JSON.stringify(acc));
-        setInterval(pingServer, 20000);
-        showHub();
-      })
-      .catch(function() { msg.textContent = 'Connection failed.'; });
-  };
-
-  window.doRegister = function() {
-    var name = (document.getElementById('login-name').value || '').trim();
-    var pass = document.getElementById('login-pass').value || '';
-    var msg  = document.getElementById('login-msg');
-    if (!name || !pass) { msg.textContent = 'Enter name and password.'; return; }
-    msg.textContent = 'Registering…';
-    fetch('/api/register', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name:name, password:pass }) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.ok) { msg.textContent = d.error || 'Registration failed.'; return; }
-        _authName = d.name; _authToken = d.token;
-        localStorage.setItem('af_auth_name', d.name);
-        localStorage.setItem('af_auth_token', d.token);
-        var acc = loadAccount() || {};
-        ensureItems(acc); _account = acc;
-        apiFetch('/api/save', { method:'POST', body:JSON.stringify({ gameData:acc }) }).catch(function(){});
-        setInterval(pingServer, 20000);
-        showHub();
-      })
-      .catch(function() { msg.textContent = 'Connection failed.'; });
-  };
-
-  window.playOffline = function() {
-    var acc = loadAccount() || {};
-    ensureItems(acc); _account = acc;
-    showHub();
-  };
-
-  window.doLogout = function() {
-    _authName = _authToken = null;
-    localStorage.removeItem('af_auth_name');
-    localStorage.removeItem('af_auth_token');
-    showLoginScreen();
-  };
-
-  // ── Social ────────────────────────────────────────────────────────────────
-  window.showSocial = function() {
-    if (!isLoggedIn()) {
-      if (confirm('Social features need an account. Log in?')) showLoginScreen();
-      return;
-    }
-    var el = document.getElementById('social-logged-as');
-    if (el) el.textContent = 'Logged in as: ' + _authName;
-    document.getElementById('social-search-result').innerHTML = '';
-    document.getElementById('social-search-input').value = '';
-    loadSocialData();
-    showScreen('screen-social');
-  };
-
-  function loadSocialData() {
-    apiFetch('/api/friends')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.ok) return;
-        renderFriends(d.friends || []);
-        renderFriendRequests(d.requests || []);
-      }).catch(function(){});
-    apiFetch('/api/trade/pending')
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (Array.isArray(d)) renderTrades(d); })
-      .catch(function(){});
-  }
-
-  function renderFriends(friends) {
-    var el = document.getElementById('social-friends');
-    if (!el) return;
-    if (!friends.length) {
-      el.innerHTML = '<div class="social-empty">No friends yet — search for players to add!</div>';
-      return;
-    }
-    el.innerHTML = friends.map(function(f) {
-      var safe = f.name.replace(/'/g, "\\'");
-      return '<div class="social-friend-item">' +
-        '<span class="social-online-dot' + (f.online ? ' online' : '') + '"></span>' +
-        '<span class="social-friend-name">' + f.name + '</span>' +
-        '<span class="social-friend-stats">Lv.' + (f.level||0) + ' · ' + (f.rubies||0) + '🔴 · ' + (f.pets||0) + '🐾</span>' +
-        '<button class="btn social-btn" onclick="openTradeWith(\'' + safe + '\')">🔄 Trade</button>' +
-        '<button class="social-btn-red" onclick="removeFriend(\'' + safe + '\')">✕</button>' +
-        '</div>';
-    }).join('');
-  }
-
-  function renderFriendRequests(reqs) {
-    var el = document.getElementById('social-requests');
-    if (!el) return;
-    if (!reqs.length) {
-      el.innerHTML = '<div class="social-empty">No pending requests.</div>';
-      return;
-    }
-    el.innerHTML = reqs.map(function(name) {
-      var safe = name.replace(/'/g, "\\'");
-      return '<div class="social-req-item">' +
-        '<span class="social-friend-name">' + name + '</span>' +
-        '<button class="btn btng social-btn" onclick="acceptFriendReq(\'' + safe + '\')">✓ Accept</button>' +
-        '<button class="social-btn-red" onclick="rejectFriendReq(\'' + safe + '\')">✕ Reject</button>' +
-        '</div>';
-    }).join('');
-  }
-
-  function renderTrades(trades) {
-    var el = document.getElementById('social-trades');
-    if (!el) return;
-    if (!trades.length) {
-      el.innerHTML = '<div class="social-empty">No pending trade offers.</div>';
-      return;
-    }
-    el.innerHTML = trades.map(function(t) {
-      var safeId = t.id.replace(/'/g, "\\'");
-      var offerDesc = (t.offer.rubies ? t.offer.rubies + '🔴 ' : '') +
-        (t.offer.pets||[]).map(function(p) { return (p.e||'🐾') + p.n; }).join(' ');
-      var wantDesc  = (t.want.rubies ? t.want.rubies + '🔴 ' : '') +
-        (t.want.pets||[]).map(function(p) { return (p.e||'🐾') + p.n; }).join(' ');
-      return '<div class="social-trade-item">' +
-        '<div class="social-trade-from">From: <b>' + t.from + '</b></div>' +
-        '<div class="social-trade-offer">Offers: ' + (offerDesc || '—') + '</div>' +
-        '<div class="social-trade-want">Wants: '  + (wantDesc  || '—') + '</div>' +
-        '<div class="social-trade-btns">' +
-        '<button class="btn btng social-btn" onclick="respondTrade(\'' + safeId + '\',true)">✓ Accept</button>' +
-        '<button class="social-btn-red" onclick="respondTrade(\'' + safeId + '\',false)">✕ Decline</button>' +
-        '</div></div>';
-    }).join('');
-  }
-
-  window.socialSearch = function() {
-    var name = (document.getElementById('social-search-input').value || '').trim();
-    var el   = document.getElementById('social-search-result');
-    if (!name) return;
-    el.innerHTML = '<div class="social-empty">Searching…</div>';
-    apiFetch('/api/user/' + encodeURIComponent(name))
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.ok) { el.innerHTML = '<div class="social-empty">Player not found.</div>'; return; }
-        var pets = (d.pets||[]).map(function(p) { return p.e||'🐾'; }).join('');
-        var safe = d.name.replace(/'/g, "\\'");
-        el.innerHTML = '<div class="social-found-item">' +
-          '<span class="social-online-dot' + (d.online ? ' online' : '') + '"></span>' +
-          '<span class="social-friend-name">' + d.name + '</span>' +
-          '<span class="social-friend-stats">Lv.' + (d.level||0) + ' · ' + (d.rubies||0) + '🔴 · ' + (d.pets||[]).length + '🐾 ' + pets + '</span>' +
-          '<button class="btn btng social-btn" onclick="sendFriendReq(\'' + safe + '\')">+ Friend</button>' +
-          '<button class="btn social-btn" onclick="openTradeWith(\'' + safe + '\')">🔄 Trade</button>' +
-          '</div>';
-      })
-      .catch(function() { el.innerHTML = '<div class="social-empty">Search failed.</div>'; });
-  };
-
-  window.sendFriendReq = function(name) {
-    apiFetch('/api/friends/request', { method:'POST', body:JSON.stringify({ to:name }) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { alert(d.ok ? 'Friend request sent to ' + name + '!' : (d.error||'Failed.')); })
-      .catch(function() { alert('Failed to send request.'); });
-  };
-
-  window.acceptFriendReq = function(from) {
-    apiFetch('/api/friends/accept', { method:'POST', body:JSON.stringify({ from:from }) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.ok) loadSocialData(); })
-      .catch(function(){});
-  };
-
-  window.rejectFriendReq = function(from) {
-    apiFetch('/api/friends/reject', { method:'POST', body:JSON.stringify({ from:from }) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.ok) loadSocialData(); })
-      .catch(function(){});
-  };
-
-  window.removeFriend = function(name) {
-    if (!confirm('Remove ' + name + ' from friends?')) return;
-    apiFetch('/api/friends/' + encodeURIComponent(name), { method:'DELETE' })
-      .then(function(r) { return r.json(); })
-      .then(function(d) { if (d.ok) loadSocialData(); })
-      .catch(function(){});
-  };
-
-  window.respondTrade = function(tradeId, accept) {
-    apiFetch('/api/trade/respond', { method:'POST', body:JSON.stringify({ tradeId:tradeId, accept:accept }) })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d.ok && d.accepted && d.myNewData) {
-          var acc = ensureItems(getAccount());
-          acc.homePets = d.myNewData.homePets;
-          acc.rubies   = d.myNewData.rubies;
-          saveAccount(acc);
-          alert('Trade completed!');
-        } else if (d.ok && !d.accepted) {
-          alert('Trade declined.');
-        }
-        loadSocialData();
-      })
-      .catch(function(){});
-  };
-
-  // ── Trade Modal ───────────────────────────────────────────────────────────
-  var _tradeTarget    = null;
-  var _tradeMyPets    = [];
-  var _tradeTheirPets = [];
-
-  window.openTradeWith = function(targetName) {
-    var acc = ensureItems(getAccount());
-    if (!isLoggedIn()) { alert('Must be logged in to trade.'); return; }
-    apiFetch('/api/user/' + encodeURIComponent(targetName))
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.ok) { alert('Player not found.'); return; }
-        _tradeTarget    = targetName;
-        _tradeMyPets    = acc.homePets || [];
-        _tradeTheirPets = d.pets || [];
-        renderTradeModal();
-      })
-      .catch(function() { alert('Failed to load player data.'); });
-  };
-
-  function renderTradeModal() {
-    var modal = document.getElementById('trade-modal');
-    if (!modal) return;
-    document.getElementById('trade-modal-title').textContent = '🔄 Trade with ' + _tradeTarget;
-    document.getElementById('trade-my-pets').innerHTML = _tradeMyPets.length
-      ? _tradeMyPets.map(function(p, i) {
-          return '<label class="trade-pet-label"><input type="checkbox" id="tmo_' + i + '"> ' + (p.e||'🐾') + ' ' + p.n + '</label>';
-        }).join('')
-      : '<div class="social-empty">No pets to offer</div>';
-    document.getElementById('trade-their-pets').innerHTML = _tradeTheirPets.length
-      ? _tradeTheirPets.map(function(p, i) {
-          return '<label class="trade-pet-label"><input type="checkbox" id="ttw_' + i + '"> ' + (p.e||'🐾') + ' ' + p.n + '</label>';
-        }).join('')
-      : '<div class="social-empty">No pets</div>';
-    document.getElementById('trade-offer-rubies').value = '0';
-    document.getElementById('trade-want-rubies').value  = '0';
-    modal.style.display = 'flex';
-  }
-
-  window.sendTradeOffer = function() {
-    var offerRubies = parseInt(document.getElementById('trade-offer-rubies').value) || 0;
-    var wantRubies  = parseInt(document.getElementById('trade-want-rubies').value)  || 0;
-    var offerPets = _tradeMyPets.filter(function(p, i) {
-      var cb = document.getElementById('tmo_' + i); return cb && cb.checked;
-    });
-    var wantPets = _tradeTheirPets.filter(function(p, i) {
-      var cb = document.getElementById('ttw_' + i); return cb && cb.checked;
-    });
-    var acc = ensureItems(getAccount());
-    if (offerRubies > (acc.rubies||0)) { alert('Not enough rubies!'); return; }
-    if (!offerPets.length && !offerRubies && !wantPets.length && !wantRubies) {
-      alert('Select at least one thing to trade.'); return;
-    }
-    apiFetch('/api/trade/request', {
-      method:'POST',
-      body:JSON.stringify({ to:_tradeTarget, offer:{ pets:offerPets, rubies:offerRubies }, want:{ pets:wantPets, rubies:wantRubies } })
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (d.ok) { alert('Trade offer sent to ' + _tradeTarget + '!'); window.closeTradeModal(); }
-        else alert(d.error || 'Trade failed.');
-      })
-      .catch(function() { alert('Trade request failed.'); });
-  };
-
-  window.closeTradeModal = function() {
-    var el = document.getElementById('trade-modal');
-    if (el) el.style.display = 'none';
-  };
-
-  // ── Leaderboard ───────────────────────────────────────────────────────────
-  window.showLeaderboard = function() {
-    var el = document.getElementById('leaderboard-list');
-    if (el) el.innerHTML = '<div class="social-empty">Loading…</div>';
-    showScreen('screen-leaderboard');
-    fetch('/api/leaderboard').then(function(r) { return r.json(); }).then(function(rows) {
-      if (!el || !Array.isArray(rows)) return;
-      var myName = _authName || '';
-      el.innerHTML = '<div class="lb-header"><span>#</span><span>Name</span><span>Level</span><span>Rubies</span><span>Pets</span></div>' +
-        rows.map(function(row, i) {
-          return '<div class="lb-row' + (row.name === myName ? ' lb-mine' : '') + '">' +
-            '<span class="lb-rank">' + (i+1) + '</span>' +
-            '<span class="lb-name">' + row.name + '</span>' +
-            '<span class="lb-level">' + row.level + '</span>' +
-            '<span class="lb-rubies">' + row.rubies + '🔴</span>' +
-            '<span class="lb-pets">' + row.pets + '🐾</span>' +
-            '</div>';
-        }).join('');
-    }).catch(function() {
-      if (el) el.innerHTML = '<div class="social-empty">Failed to load leaderboard.</div>';
-    });
-  };
-
   // ── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
+    var acc = loadAccount();
+    if (!acc) acc = {};
+    ensureItems(acc);
+    _account = acc;
     var mv = parseFloat(localStorage.getItem('af_music_vol') || '0.1');
     var sv = parseFloat(localStorage.getItem('af_sfx_vol')   || '1.0');
     var ms = document.getElementById('music-vol-slider');
     var ss = document.getElementById('sfx-vol-slider');
     if (ms) { ms.value = mv; document.getElementById('music-vol-pct').textContent = Math.round(mv * 100) + '%'; }
     if (ss) { ss.value = sv; document.getElementById('sfx-vol-pct').textContent   = Math.round(sv * 100) + '%'; }
-    ['login-name','login-pass'].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.doLogin(); });
-    });
-    var savedName  = localStorage.getItem('af_auth_name');
-    var savedToken = localStorage.getItem('af_auth_token');
-    if (savedName && savedToken) {
-      _authName = savedName; _authToken = savedToken;
-      apiFetch('/api/save')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.ok) {
-            var serverData = d.gameData || {};
-            var localAcc   = loadAccount() || {};
-            var useServer  = (serverData.highestLevel || 0) >= (localAcc.highestLevel || 0);
-            var acc = useServer ? serverData : localAcc;
-            ensureItems(acc); _account = acc;
-            localStorage.setItem(SAVE_KEY, JSON.stringify(acc));
-            setInterval(pingServer, 20000);
-            showHub();
-          } else {
-            _authName = _authToken = null;
-            localStorage.removeItem('af_auth_name');
-            localStorage.removeItem('af_auth_token');
-            showLoginScreen();
-          }
-        })
-        .catch(function() {
-          var acc = loadAccount() || {};
-          ensureItems(acc); _account = acc;
-          showHub();
-        });
-    } else {
-      showLoginScreen();
-    }
+    showHub();
   });
 })();
