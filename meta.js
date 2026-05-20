@@ -984,6 +984,13 @@ function speciesCount(acc, petId) {
     document.getElementById('hub-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel;
     renderHomePets(acc.homePets);
+    // Sync audio sliders with saved values
+    var mv = window.getMusicVolume ? window.getMusicVolume() : 0.1;
+    var sv = window.getSFXVolume   ? window.getSFXVolume()   : 1.0;
+    var ms = document.getElementById('music-vol-slider');
+    var ss = document.getElementById('sfx-vol-slider');
+    if (ms) { ms.value = mv; document.getElementById('music-vol-pct').textContent = Math.round(mv * 100) + '%'; }
+    if (ss) { ss.value = sv; document.getElementById('sfx-vol-pct').textContent   = Math.round(sv * 100) + '%'; }
     showScreen('screen-hub');
   }
   window.showHub = showHub;

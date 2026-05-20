@@ -238,6 +238,14 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 .hub-rubies{color:#ff9090;font-size:17px;font-weight:bold;}
 .hub-best{color:#9060c0;font-size:11px;}
 .hub-logout{font-size:11px;padding:4px 10px;}
+.audio-settings{
+  background:rgba(18,4,40,0.95);border:1px solid #5025a0;border-radius:12px;
+  padding:10px 16px;display:flex;flex-direction:column;gap:8px;
+}
+.audio-row{display:flex;align-items:center;gap:10px;}
+.audio-lbl{color:#d090ff;font-size:12px;width:72px;flex-shrink:0;}
+.audio-slider{flex:1;accent-color:#a040e0;height:4px;cursor:pointer;}
+.audio-pct{color:#ffcc88;font-size:11px;width:36px;text-align:right;flex-shrink:0;}
 .hub-home-section{
   background:rgba(18,4,40,0.95);border:1px solid #5025a0;border-radius:12px;
   padding:14px 16px;min-height:80px;

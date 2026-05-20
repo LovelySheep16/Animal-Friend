@@ -1571,16 +1571,30 @@ Game.prototype.draw = function() {
 };
 
 // ── Audio engine (Web Audio API, no files needed) ──────────────────────────
-var _AC = null;
+var _AC = null, _SFX_GAIN = null;
 function ac() {
-  if (!_AC) _AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (!_AC) {
+    _AC = new (window.AudioContext || window.webkitAudioContext)();
+    _SFX_GAIN = _AC.createGain();
+    _SFX_GAIN.gain.value = parseFloat(localStorage.getItem('af_sfx_vol') || '1.0');
+    _SFX_GAIN.connect(_AC.destination);
+  }
   return _AC;
 }
+function sfxDest() { ac(); return _SFX_GAIN || _AC.destination; }
+
+window.setSFXVolume = function (v) {
+  if (_SFX_GAIN) _SFX_GAIN.gain.value = v;
+  try { localStorage.setItem('af_sfx_vol', String(v)); } catch (e) {}
+};
+window.getSFXVolume = function () {
+  return parseFloat(localStorage.getItem('af_sfx_vol') || '1.0');
+};
 
 function sndKill() {
   try {
     var c = ac(), o = c.createOscillator(), g = c.createGain();
-    o.connect(g); g.connect(c.destination);
+    o.connect(g); g.connect(sfxDest());
     o.type = 'square';
     o.frequency.setValueAtTime(280, c.currentTime);
     o.frequency.exponentialRampToValueAtTime(70, c.currentTime + 0.13);
@@ -1595,7 +1609,7 @@ function sndBuyPet() {
     var c = ac();
     [[523,0],[659,0.08],[784,0.16],[1047,0.24]].forEach(function(p) {
       var o = c.createOscillator(), g = c.createGain();
-      o.connect(g); g.connect(c.destination);
+      o.connect(g); g.connect(sfxDest());
       o.type = 'sine'; o.frequency.value = p[0];
       var t = c.currentTime + p[1];
       g.gain.setValueAtTime(0.0, t);
@@ -1611,7 +1625,7 @@ function sndLevelUp() {
     var c = ac();
     [[392,0,0.2],[494,0.12,0.2],[587,0.24,0.2],[784,0.36,0.55],[988,0.5,0.7]].forEach(function(n) {
       var o = c.createOscillator(), g = c.createGain();
-      o.connect(g); g.connect(c.destination);
+      o.connect(g); g.connect(sfxDest());
       o.type = 'triangle'; o.frequency.value = n[0];
       var t = c.currentTime + n[1];
       g.gain.setValueAtTime(0.0, t);
