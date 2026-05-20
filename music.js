@@ -20,15 +20,44 @@
   aud.loop = true;
   aud.volume = 0.5;
 
+  var unlocked = false;
+  var pending = null;
+
+  function tryPlay(file) {
+    if (!aud.paused && aud.src.endsWith(file)) return;
+    aud.src = file;
+    aud.load();
+    aud.play().then(function () {
+      unlocked = true;
+      pending = null;
+    }).catch(function () {
+      // autoplay blocked — store and wait for first user gesture
+      pending = file;
+    });
+  }
+
+  // On first user interaction, start whatever track was queued
+  function onUnlock() {
+    if (unlocked) return;
+    unlocked = true;
+    document.removeEventListener('click',     onUnlock, true);
+    document.removeEventListener('touchstart', onUnlock, true);
+    document.removeEventListener('keydown',   onUnlock, true);
+    if (pending) {
+      aud.src = pending;
+      aud.load();
+      aud.play().catch(function () {});
+      pending = null;
+    }
+  }
+  document.addEventListener('click',     onUnlock, true);
+  document.addEventListener('touchstart', onUnlock, true);
+  document.addEventListener('keydown',   onUnlock, true);
+
   window.playScreenMusic = function (screenId) {
     var file = MAP[screenId];
     if (!file) return;
-    var want = file;
-    // already playing this track — do nothing
-    if (!aud.paused && aud.src.endsWith(want)) return;
-    aud.src = want;
-    aud.load();
-    aud.play().catch(function () {});
+    tryPlay(file);
   };
 
   window.stopMusic = function () {
