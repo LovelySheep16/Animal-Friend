@@ -11,6 +11,27 @@
 </head>
 <body>
 
+<!-- ── Login ──────────────────────────────────────────────── -->
+<div id="screen-login" class="meta-screen" style="display:none">
+  <div class="meta-card shop-card login-card">
+    <div class="meta-title">🎮 Animal Friend RPG</div>
+    <div id="login-msg" class="login-msg"></div>
+    <div class="login-field">
+      <label>Name</label>
+      <input type="text" id="login-name" maxlength="20" placeholder="2–20 chars · letters, numbers, _">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" maxlength="100" placeholder="4+ characters">
+    </div>
+    <div class="login-btns">
+      <button class="btn btng" onclick="doLogin()">🔓 Login</button>
+      <button class="btn" onclick="doRegister()">📝 Register</button>
+    </div>
+    <button class="btn login-offline-btn" onclick="playOffline()">👤 Play Offline (no account)</button>
+  </div>
+</div>
+
 <!-- ── Hub ──────────────────────────────────────────────── -->
 <div id="screen-hub" class="meta-screen" style="display:none">
   <div class="hub-wrap">
@@ -18,6 +39,10 @@
       <div class="hub-stats">
         <span id="hub-rubies" class="hub-rubies">0 🔴</span>
         <span id="hub-best" class="hub-best">Best: Level 0</span>
+      </div>
+      <div id="hub-account" class="hub-account-row" style="display:none">
+        <span id="hub-username" class="hub-username"></span>
+        <button class="btn hub-logout-btn" onclick="doLogout()">Sign Out</button>
       </div>
     </div>
     <div class="hub-home-section">
@@ -89,6 +114,16 @@
         <span class="hab-icon">🌠</span>
         <span class="hab-label">Boss Fight</span>
         <span class="hab-desc">Face the Cosmic Terror!<br><small>Once per 90 days · +10,000 🔴</small></span>
+      </button>
+      <button class="hub-action-btn hub-social-btn" onclick="showSocial()">
+        <span class="hab-icon">👥</span>
+        <span class="hab-label">Social</span>
+        <span class="hab-desc">Friends, trading, online status<br><small>Add friends · trade pets &amp; rubies</small></span>
+      </button>
+      <button class="hub-action-btn hub-lb-btn" onclick="showLeaderboard()">
+        <span class="hab-icon">🏆</span>
+        <span class="hab-label">Leaderboard</span>
+        <span class="hab-desc">Top 50 players worldwide<br><small>Level · Rubies · Pet count</small></span>
       </button>
     </div>
   </div>
@@ -217,6 +252,59 @@
     <div style="color:#ffcc88;font-size:11px;text-align:center;margin-bottom:6px">Food persists in your backpack until eaten. Use F or the backpack button in-game!</div>
     <div id="food-shop-grid"></div>
     <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Social ─────────────────────────────────────────────── -->
+<div id="screen-social" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">👥 Social</div>
+    <div id="social-logged-as" class="social-logged-as"></div>
+    <div class="social-section-title">🔍 Find Player</div>
+    <div class="social-find-row">
+      <input type="text" id="social-search-input" class="social-input" placeholder="Enter player name" maxlength="20">
+      <button class="btn" onclick="socialSearch()">Search</button>
+    </div>
+    <div id="social-search-result"></div>
+    <div class="social-section-title">📬 Friend Requests</div>
+    <div id="social-requests"></div>
+    <div class="social-section-title">👫 Friends</div>
+    <div id="social-friends"></div>
+    <div class="social-section-title">🔄 Trade Offers</div>
+    <div id="social-trades"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Leaderboard ───────────────────────────────────────── -->
+<div id="screen-leaderboard" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🏆 Leaderboard</div>
+    <div id="leaderboard-list" class="leaderboard-list"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Trade Modal ────────────────────────────────────────── -->
+<div id="trade-modal">
+  <div class="trade-modal-box">
+    <div id="trade-modal-title" class="trade-modal-title">🔄 Trade</div>
+    <div class="trade-cols">
+      <div>
+        <div class="trade-col-title">🎒 Your offer</div>
+        <div id="trade-my-pets" class="trade-pet-list"></div>
+        <div class="trade-rubies-row">🔴 Offer rubies: <input type="number" id="trade-offer-rubies" value="0" min="0"></div>
+      </div>
+      <div>
+        <div class="trade-col-title">💝 You want</div>
+        <div id="trade-their-pets" class="trade-pet-list"></div>
+        <div class="trade-rubies-row">🔴 Want rubies: <input type="number" id="trade-want-rubies" value="0" min="0"></div>
+      </div>
+    </div>
+    <div class="trade-modal-btns">
+      <button class="btn btng" onclick="sendTradeOffer()">📤 Send Offer</button>
+      <button class="btn" onclick="closeTradeModal()">✕ Cancel</button>
+    </div>
   </div>
 </div>
 
