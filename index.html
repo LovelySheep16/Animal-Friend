@@ -80,6 +80,11 @@
         <span class="hab-label">Food Shop</span>
         <span class="hab-desc">Buy food for your runs<br><small>30 foods · persist until eaten</small></span>
       </button>
+      <button class="hub-action-btn hub-sub-btn" onclick="showSubscription()">
+        <span class="hab-icon">👑</span>
+        <span class="hab-label">Subscribe</span>
+        <span class="hab-desc">Premium perks for €5/month<br><small>Faster dragons · Cheaper shops</small></span>
+      </button>
       <button class="hub-action-btn hub-boss-btn" onclick="playBossRun()">
         <span class="hab-icon">🌠</span>
         <span class="hab-label">Boss Fight</span>
@@ -183,6 +188,23 @@
     <div class="shop-rubies">Emeralds: <span id="chests-emeralds">0 💚</span></div>
     <div style="color:#aaffcc;font-size:11px;text-align:center;margin-bottom:6px">Each chest gives 1 exclusive item: weapon, character, or pet not found anywhere else!</div>
     <div id="chests-grid" class="chests-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Subscription ───────────────────────────────────────── -->
+<div id="screen-subscription" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">👑 Subscription</div>
+    <div class="sub-price">€5 / month</div>
+    <div class="sub-benefits">
+      <div class="sub-benefit">🥚 Dragon hatching: 30 days → <b>10 days</b></div>
+      <div class="sub-benefit">💚 Exchange rate: 70 🔴 → <b>30 🔴</b> per emerald</div>
+      <div class="sub-benefit">🛒 All shops: <b>-25 🔴</b> discount (chests excluded)</div>
+    </div>
+    <div id="sub-status" class="sub-status-row"></div>
+    <button id="sub-btn" class="btn btng sub-buy-btn" onclick="activateSubscription()">👑 Subscribe — €5/month</button>
+    <div style="color:#888;font-size:10px;text-align:center;margin-top:6px">Payment integration coming soon — click to activate for demo</div>
     <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
   </div>
 </div>

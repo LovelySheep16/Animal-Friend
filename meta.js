@@ -299,6 +299,25 @@
   ];
   window.FOOD_ITEMS = FOOD_ITEMS;
 
+  // ── Subscription helpers ───────────────────────────────────
+  function isSubscribed() {
+    var acc = getAccount();
+    return !!(acc && (acc.subExpiry || 0) > Date.now());
+  }
+  function subCost(cost) {
+    return isSubscribed() ? Math.max(0, cost - 25) : cost;
+  }
+  function hatchDays() { return isSubscribed() ? 10 : 30; }
+  function getEmeraldDeals() {
+    var rate = isSubscribed() ? 30 : 70;
+    return [
+      {rubies: rate,     emeralds:1,  label: rate + ' 🔴 → 1 💚'},
+      {rubies: rate*5,   emeralds:6,  label: (rate*5) + ' 🔴 → 6 💚 (+1 bonus)'},
+      {rubies: rate*10,  emeralds:14, label: (rate*10) + ' 🔴 → 14 💚 (+4 bonus)'},
+      {rubies: rate*50,  emeralds:80, label: (rate*50) + ' 🔴 → 80 💚 (+30 bonus)'},
+    ];
+  }
+
   var DRAGON_TYPES = {
     aquarium: { e:'💧', n:'Sea Dragon',     rubyPerDay:3  },
     forest:   { e:'🍃', n:'Forest Dragon',  rubyPerDay:5  },
@@ -552,6 +571,7 @@
     if (!acc.chestChars)        acc.chestChars        = [];
     if (!acc.chestPets)         acc.chestPets         = {};
     if (!acc.backpack)          acc.backpack          = {};
+    if (!acc.subExpiry)         acc.subExpiry         = 0;
     if (!acc.stats) acc.stats = {
       runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
       totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
@@ -610,7 +630,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop','screen-subscription'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -775,7 +795,8 @@ function speciesCount(acc, petId) {
       cats[cat].forEach(function(c) {
         var isOwned  = owned.indexOf(c.id) >= 0;
         var isActive = active === c.id;
-        var canBuy   = acc.rubies >= c.cost && !isOwned;
+        var ccost    = subCost(c.cost);
+        var canBuy   = acc.rubies >= ccost && !isOwned;
         var safeId   = c.id.replace(/'/g, "\\'");
         html += '<div class="weapon-item char-item' + (isActive ? ' weapon-active' : '') + '">';
         html += '<div class="weapon-emoji">' + c.e + '</div>';
@@ -788,7 +809,7 @@ function speciesCount(acc, petId) {
         if (!isOwned) {
           html += '<button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
             (canBuy ? ' onclick="buyCharacter(\'' + safeId + '\')"' : ' disabled') + '>' +
-            (c.cost === 0 ? 'Free' : 'Buy ' + c.cost + '🔴') + '</button>';
+            (ccost === 0 ? 'Free' : 'Buy ' + ccost + '🔴') + '</button>';
         } else {
           html += '<button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipCharacter(\'' + safeId + '\')">' +
             (isActive ? '✓ Playing' : 'Play') + '</button>';
@@ -825,10 +846,11 @@ function speciesCount(acc, petId) {
     var chars = window.CHARACTERS || [];
     var c = null;
     for (var i = 0; i < chars.length; i++) { if (chars[i].id === id) { c = chars[i]; break; } }
-    if (!c || acc.rubies < c.cost) return;
+    var cost = c ? subCost(c.cost) : 0;
+    if (!c || acc.rubies < cost) return;
     if ((acc.characters || []).indexOf(id) >= 0) return;
-    acc.rubies -= c.cost;
-    acc.stats.rubiesSpent += c.cost;
+    acc.rubies -= cost;
+    acc.stats.rubiesSpent += cost;
     acc.characters.push(id);
     checkAwards(acc);
     saveAccount(acc);
@@ -846,18 +868,14 @@ function speciesCount(acc, petId) {
   };
 
   // ── Exchange (rubies → emeralds) ──────────────────────────
-  var EMERALD_DEALS = [
-    {rubies:70,   emeralds:1,  label:'70 🔴 → 1 💚'},
-    {rubies:350,  emeralds:6,  label:'350 🔴 → 6 💚  (+1 bonus)'},
-    {rubies:700,  emeralds:14, label:'700 🔴 → 14 💚 (+4 bonus)'},
-    {rubies:3500, emeralds:80, label:'3500 🔴 → 80 💚 (+30 bonus)'},
-  ];
   window.showExchange = function() {
     var acc = ensureItems(getAccount());
     document.getElementById('exchange-rubies').textContent  = acc.rubies + ' 🔴';
     document.getElementById('exchange-emeralds').textContent= acc.emeralds + ' 💚';
-    var html = '';
-    EMERALD_DEALS.forEach(function(d, i) {
+    var deals = getEmeraldDeals();
+    var sub = isSubscribed();
+    var html = sub ? '<div style="color:#ffd700;font-size:11px;text-align:center;margin-bottom:6px">👑 Subscriber rate: 30 🔴 = 1 💚</div>' : '';
+    deals.forEach(function(d, i) {
       var can = acc.rubies >= d.rubies;
       html += '<div class="exchange-deal' + (can ? '' : ' cant-buy') + '" onclick="' + (can ? 'buyEmeraldDeal(' + i + ')' : '') + '">';
       html += '<span class="exchange-label">' + d.label + '</span>';
@@ -869,7 +887,7 @@ function speciesCount(acc, petId) {
   };
   window.buyEmeraldDeal = function(i) {
     var acc = ensureItems(getAccount());
-    var d = EMERALD_DEALS[i];
+    var d = getEmeraldDeals()[i];
     if (!d || acc.rubies < d.rubies) return;
     acc.rubies -= d.rubies;
     acc.emeralds = (acc.emeralds || 0) + d.emeralds;
@@ -1167,7 +1185,7 @@ function speciesCount(acc, petId) {
         var allHabs = ['aquarium','forest','savanna','sky','mythical','world'];
         var pool = habPool.length ? habPool : allHabs;
         var hab = pool[Math.floor(Math.random() * pool.length)];
-        acc.dragonEggs.push({ habitat: hab, hatchAt: Date.now() + 30*24*60*60*1000 });
+        acc.dragonEggs.push({ habitat: hab, hatchAt: Date.now() + hatchDays()*24*60*60*1000 });
         eggsGot++;
       }
     }
@@ -1225,24 +1243,26 @@ function speciesCount(acc, petId) {
     var acc = ensureItems(getAccount());
     document.getElementById('meta-shop-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('meta-shop-grid').innerHTML = META_ITEMS.map(function(item) {
+      var cost   = subCost(item.cost);
       var owned  = acc.shopItems[item.id] || 0;
-      var canBuy = acc.rubies >= item.cost;
+      var canBuy = acc.rubies >= cost;
       return '<div class="meta-shop-item' + (canBuy ? '' : ' cant-buy') + '">' +
         '<div class="meta-item-icon">' + item.e + '</div>' +
         '<div class="meta-item-name">' + item.n + '</div>' +
         '<div class="meta-item-desc">' + item.d + '</div>' +
         (owned ? '<div class="meta-item-owned">✓ Ready ×' + owned + '</div>' : '') +
         '<button class="meta-buy-btn"' + (canBuy ? ' onclick="metaBuyItem(\'' + item.id + '\')"' : ' disabled') + '>' +
-        item.cost + ' 🔴</button></div>';
+        cost + ' 🔴</button></div>';
     }).join('');
   }
 
   window.metaBuyItem = function (id) {
     var acc  = ensureItems(getAccount());
     var item = META_ITEMS.find(function(i) { return i.id === id; });
-    if (!item || acc.rubies < item.cost) return;
-    acc.rubies -= item.cost;
-    acc.stats.rubiesSpent += item.cost;
+    var cost = item ? subCost(item.cost) : 0;
+    if (!item || acc.rubies < cost) return;
+    acc.rubies -= cost;
+    acc.stats.rubiesSpent += cost;
     acc.shopItems[id] = (acc.shopItems[id] || 0) + 1;
     saveAccount(acc); renderMetaShop();
   };
@@ -1270,7 +1290,8 @@ function speciesCount(acc, petId) {
       html += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
       SERVANTS.filter(function(sv) { return sv.cat === cat; }).forEach(function(sv) {
         var owned   = acc.servants[sv.id] || 0;
-        var canBuy  = acc.rubies >= sv.cost;
+        var svcost  = subCost(sv.cost);
+        var canBuy  = acc.rubies >= svcost;
         var safeId  = sv.id.replace(/'/g, "\\'");
         html += '<div class="weapon-item">' +
           '<div class="weapon-emoji">' + sv.e + '</div>' +
@@ -1279,7 +1300,7 @@ function speciesCount(acc, petId) {
           (owned ? '<div class="weapon-level">Owned: ' + owned + '</div>' : '') +
           '<div class="weapon-btns"><button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
           (canBuy ? ' onclick="buyServant(\'' + safeId + '\')"' : ' disabled') + '>' +
-          'Buy ' + sv.cost + ' 🔴</button></div></div>';
+          'Buy ' + svcost + ' 🔴</button></div></div>';
       });
       html += '</div>';
     });
@@ -1302,9 +1323,10 @@ function speciesCount(acc, petId) {
   window.buyServant = function (id) {
     var acc = ensureItems(getAccount());
     var sv  = SERVANTS.find(function(x) { return x.id === id; });
-    if (!sv || acc.rubies < sv.cost) return;
-    acc.rubies -= sv.cost;
-    acc.stats.rubiesSpent += sv.cost;
+    var cost = sv ? subCost(sv.cost) : 0;
+    if (!sv || acc.rubies < cost) return;
+    acc.rubies -= cost;
+    acc.stats.rubiesSpent += cost;
     acc.servants[id] = (acc.servants[id] || 0) + 1;
     checkAwards(acc);
     saveAccount(acc);
@@ -1356,7 +1378,8 @@ function speciesCount(acc, petId) {
       weapons.filter(function(w) { return w.cat === cat; }).forEach(function(w) {
         var owned = acc.weapons[w.id] || 0;
         var isActive = activeId === w.id;
-        var canBuy = acc.rubies >= w.cost;
+        var wcost = subCost(w.cost);
+        var canBuy = acc.rubies >= wcost;
         var lvl = owned || 0;
         var safeName = w.id.replace(/'/g, "\\'");
         html += '<div class="weapon-item' + (isActive ? ' weapon-active' : '') + '">' +
@@ -1368,12 +1391,12 @@ function speciesCount(acc, petId) {
           (owned
             ? '<button class="weapon-btn weapon-upgrade' + (canBuy ? '' : ' cant-buy') + '"' +
               (canBuy ? ' onclick="buyWeapon(\'' + safeName + '\')"' : ' disabled') + '>' +
-              'Upgrade ' + w.cost + '🔴</button>' +
+              'Upgrade ' + wcost + '🔴</button>' +
               '<button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipWeapon(\'' + safeName + '\')">' +
               (isActive ? '✓ Equipped' : 'Equip') + '</button>'
             : '<button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
               (canBuy ? ' onclick="buyWeapon(\'' + safeName + '\')"' : ' disabled') + '>' +
-              'Buy ' + w.cost + '🔴</button>'
+              'Buy ' + wcost + '🔴</button>'
           ) +
           '</div></div>';
       });
@@ -1407,9 +1430,10 @@ function speciesCount(acc, petId) {
     var weapons = window.WEAPONS || [];
     var w = null;
     for (var i = 0; i < weapons.length; i++) { if (weapons[i].id === id) { w = weapons[i]; break; } }
-    if (!w || acc.rubies < w.cost) return;
-    acc.rubies -= w.cost;
-    acc.stats.rubiesSpent += w.cost;
+    var cost = w ? subCost(w.cost) : 0;
+    if (!w || acc.rubies < cost) return;
+    acc.rubies -= cost;
+    acc.stats.rubiesSpent += cost;
     acc.weapons[id] = (acc.weapons[id] || 0) + 1;
     if (!acc.activeWeapon) acc.activeWeapon = id;
     checkAwards(acc);
@@ -1456,13 +1480,14 @@ function speciesCount(acc, petId) {
       items.forEach(function(f) {
         if (f.cat !== cat) return;
         var qty = acc.backpack[f.id] || 0;
+        var fcost = subCost(f.cost);
         html += '<div class="food-shop-item">';
         html += '<div class="fsi-emoji">' + f.e + '</div>';
         html += '<div class="fsi-name">' + f.n + '</div>';
         html += '<div class="fsi-desc">' + f.desc + '</div>';
-        html += '<div class="fsi-cost">' + f.cost + ' 🔴</div>';
+        html += '<div class="fsi-cost">' + fcost + ' 🔴</div>';
         html += '<div class="fsi-qty">In bag: ' + qty + '</div>';
-        html += '<button class="btn fsi-btn" onclick="buyFoodItem(\'' + f.id + '\')"' + (acc.rubies < f.cost ? ' disabled' : '') + '>Buy</button>';
+        html += '<button class="btn fsi-btn" onclick="buyFoodItem(\'' + f.id + '\')"' + (acc.rubies < fcost ? ' disabled' : '') + '>Buy</button>';
         html += '</div>';
       });
       html += '</div>';
@@ -1476,12 +1501,34 @@ function speciesCount(acc, petId) {
     var items = window.FOOD_ITEMS || [];
     var f = null;
     for (var i = 0; i < items.length; i++) { if (items[i].id === id) { f = items[i]; break; } }
-    if (!f || acc.rubies < f.cost) return;
-    acc.rubies -= f.cost;
-    acc.stats.rubiesSpent = (acc.stats.rubiesSpent || 0) + f.cost;
+    var cost = f ? subCost(f.cost) : 0;
+    if (!f || acc.rubies < cost) return;
+    acc.rubies -= cost;
+    acc.stats.rubiesSpent = (acc.stats.rubiesSpent || 0) + cost;
     acc.backpack[id] = (acc.backpack[id] || 0) + 1;
     saveAccount(acc);
     window.showFoodShop();
+  };
+
+  // ── Subscription ──────────────────────────────────────────────────────────
+  window.showSubscription = function() {
+    var acc = ensureItems(getAccount());
+    var sub = isSubscribed();
+    var daysLeft = sub ? Math.ceil((acc.subExpiry - Date.now()) / 86400000) : 0;
+    var statusHtml = sub
+      ? '<div class="sub-active">👑 Active — ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + ' remaining</div>'
+      : '<div class="sub-inactive">Not subscribed</div>';
+    document.getElementById('sub-status').innerHTML = statusHtml;
+    document.getElementById('sub-btn').textContent = sub ? '👑 Renew (+30 days)' : '👑 Subscribe — €5/month';
+    showScreen('screen-subscription');
+  };
+
+  window.activateSubscription = function() {
+    var acc = ensureItems(getAccount());
+    var current = Math.max(Date.now(), acc.subExpiry || 0);
+    acc.subExpiry = current + 30 * 24 * 60 * 60 * 1000;
+    saveAccount(acc);
+    window.showSubscription();
   };
 
   // ── Init ──────────────────────────────────────────────────────────────────
