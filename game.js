@@ -1880,6 +1880,8 @@ function resetGameUI() {
   document.getElementById('touch-atk').style.display  = '';
   document.getElementById('touch-shop').style.display = '';
   document.getElementById('food-btn').style.display   = '';
+  var ab = document.getElementById('audio-btn');   if (ab) ab.style.display = 'none';
+  var ap = document.getElementById('audio-panel'); if (ap) ap.classList.remove('open');
 }
 
 window.META_startGame = function (config, homePets) {

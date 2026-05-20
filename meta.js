@@ -618,12 +618,20 @@ function speciesCount(acc, petId) {
     if (wrap) wrap.style.display = 'none';
     if (id === 'game') {
       if (wrap) wrap.style.display = 'block';
+      var ab = document.getElementById('audio-btn'); if (ab) ab.style.display = 'none';
     } else {
       var el = document.getElementById(id);
       if (el) el.style.display = 'flex';
+      var ab2 = document.getElementById('audio-btn'); if (ab2) ab2.style.display = '';
     }
+    var ap = document.getElementById('audio-panel'); if (ap) ap.classList.remove('open');
     if (window.playScreenMusic) window.playScreenMusic(id);
   }
+
+  window.toggleAudioPanel = function () {
+    var p = document.getElementById('audio-panel');
+    if (p) p.classList.toggle('open');
+  };
 
 
   // ── Awards ────────────────────────────────────────────────────────────────
@@ -984,13 +992,6 @@ function speciesCount(acc, petId) {
     document.getElementById('hub-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel;
     renderHomePets(acc.homePets);
-    // Sync audio sliders with saved values
-    var mv = window.getMusicVolume ? window.getMusicVolume() : 0.1;
-    var sv = window.getSFXVolume   ? window.getSFXVolume()   : 1.0;
-    var ms = document.getElementById('music-vol-slider');
-    var ss = document.getElementById('sfx-vol-slider');
-    if (ms) { ms.value = mv; document.getElementById('music-vol-pct').textContent = Math.round(mv * 100) + '%'; }
-    if (ss) { ss.value = sv; document.getElementById('sfx-vol-pct').textContent   = Math.round(sv * 100) + '%'; }
     showScreen('screen-hub');
   }
   window.showHub = showHub;
@@ -1489,6 +1490,13 @@ function speciesCount(acc, petId) {
     if (!acc) acc = {};
     ensureItems(acc);
     _account = acc;
+    // Init audio sliders from saved values
+    var mv = parseFloat(localStorage.getItem('af_music_vol') || '0.1');
+    var sv = parseFloat(localStorage.getItem('af_sfx_vol')   || '1.0');
+    var ms = document.getElementById('music-vol-slider');
+    var ss = document.getElementById('sfx-vol-slider');
+    if (ms) { ms.value = mv; document.getElementById('music-vol-pct').textContent = Math.round(mv * 100) + '%'; }
+    if (ss) { ss.value = sv; document.getElementById('sfx-vol-pct').textContent   = Math.round(sv * 100) + '%'; }
     showHub();
   });
 })();

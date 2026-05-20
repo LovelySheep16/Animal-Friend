@@ -20,20 +20,6 @@
         <span id="hub-best" class="hub-best">Best: Level 0</span>
       </div>
     </div>
-    <div class="audio-settings">
-      <div class="audio-row">
-        <span class="audio-lbl">🎵 Music</span>
-        <input type="range" id="music-vol-slider" class="audio-slider" min="0" max="1" step="0.01" value="0.1"
-          oninput="setMusicVolume(+this.value);document.getElementById('music-vol-pct').textContent=Math.round(+this.value*100)+'%'">
-        <span id="music-vol-pct" class="audio-pct">10%</span>
-      </div>
-      <div class="audio-row">
-        <span class="audio-lbl">🔊 SFX</span>
-        <input type="range" id="sfx-vol-slider" class="audio-slider" min="0" max="1" step="0.01" value="1.0"
-          oninput="setSFXVolume(+this.value);document.getElementById('sfx-vol-pct').textContent=Math.round(+this.value*100)+'%'">
-        <span id="sfx-vol-pct" class="audio-pct">100%</span>
-      </div>
-    </div>
     <div class="hub-home-section">
       <div class="hub-section-title">🏠 Home Pets</div>
       <div id="hub-pets" class="hub-pets-grid"></div>
@@ -273,6 +259,23 @@
     <div style="color:#e090ff;font-size:14px;margin-bottom:8px">All 50 dungeons conquered!</div>
     <div style="color:#e090ff;font-size:14px;margin-bottom:18px">Final Score: <span id="wscore" style="color:#ffd700"></span></div>
     <button class="btn btng" onclick="metaReturn(true)">🏠 Return to Hub</button>
+  </div>
+</div>
+
+<!-- ── Audio button (fixed, all screens) ─────────────────── -->
+<button id="audio-btn" onclick="toggleAudioPanel()">🔊<span>AUDIO</span></button>
+<div id="audio-panel">
+  <div class="audio-row">
+    <span class="audio-lbl">🎵 Music</span>
+    <input type="range" id="music-vol-slider" class="audio-slider" min="0" max="1" step="0.01" value="0.1"
+      oninput="setMusicVolume(+this.value);document.getElementById('music-vol-pct').textContent=Math.round(+this.value*100)+'%'">
+    <span id="music-vol-pct" class="audio-pct">10%</span>
+  </div>
+  <div class="audio-row">
+    <span class="audio-lbl">🔊 SFX</span>
+    <input type="range" id="sfx-vol-slider" class="audio-slider" min="0" max="1" step="0.01" value="1.0"
+      oninput="setSFXVolume(+this.value);document.getElementById('sfx-vol-pct').textContent=Math.round(+this.value*100)+'%'">
+    <span id="sfx-vol-pct" class="audio-pct">100%</span>
   </div>
 </div>
 
