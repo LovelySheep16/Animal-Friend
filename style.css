@@ -251,7 +251,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 }
 #audio-btn:active{transform:scale(0.88);}
 #audio-btn span{font-size:9px;font-weight:bold;letter-spacing:1px;opacity:0.9;font-family:'Courier New',monospace;}
-#audio-btn.in-game { position:absolute; bottom:max(18px,env(safe-area-inset-bottom)); right:256px; }
+#audio-btn.in-game { right:256px; bottom:max(18px,env(safe-area-inset-bottom)); }
 #audio-btn.in-game + #audio-panel { right:256px; }
 #audio-panel {
   position:fixed;bottom:96px;right:18px;z-index:200;
