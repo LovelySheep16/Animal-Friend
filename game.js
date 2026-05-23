@@ -1081,7 +1081,8 @@ Game.prototype.updateVolcano = function(dt, now) {
   this.volcanoCooldown -= dt * 1000;
   if (this.volcanoCooldown <= 0) {
     this.volcanoCooldown = 4500 + Math.random() * 2000;
-    this.lavaStreamLen += 100;
+    this.lavaStreamLen = Math.min(this.lavaStreamLen + 100, 2000);
+    if (this.lavaStreams.length >= 25) this.lavaStreams.splice(0, 1);
     var len   = this.lavaStreamLen;
     var angle = Math.atan2(p.y - vol.y, p.x - vol.x) + (Math.random() - 0.5) * 1.0;
     this.lavaStreams.push({ angle: angle, len: len, born: now });
@@ -2417,7 +2418,11 @@ var last = 0;
 function loop(ts) {
   var dt = Math.min((ts - last) / 1000, .05);
   last = ts;
-  if (G) { G.update(dt); ctx.clearRect(0, 0, canvas.width, canvas.height); G.draw(); }
   requestAnimationFrame(loop);
+  if (G) {
+    try { G.update(dt); } catch(e) { console.error('update error:', e); }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    try { G.draw(); } catch(e) { console.error('draw error:', e); }
+  }
 }
 rsz(); requestAnimationFrame(function(ts) { last = ts; loop(ts); });
