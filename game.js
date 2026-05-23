@@ -1031,6 +1031,18 @@ Game.prototype.updateVolcano = function(dt, now) {
         }
       }
     });
+
+    self.mons.forEach(function(m) {
+      if (m.dead || m.reviving) return;
+      if (ptSegDist(m.x, m.y, vol.x, vol.y, ex, ey) < STREAM_W) {
+        var mdmg = Math.round((m.mhp || m.hp) * 0.05);
+        if (mdmg > 0) {
+          m.hp = Math.max(0, m.hp - mdmg);
+          self.fl(m.x, m.y, '-'+mdmg+'🔥', '#ff6600');
+          if (m.hp <= 0) self.kill(m);
+        }
+      }
+    });
   });
 };
 
