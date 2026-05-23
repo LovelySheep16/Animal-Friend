@@ -565,6 +565,7 @@
     if (!acc.characters)        acc.characters        = ['brownbear'];
     if (!acc.activeCharacter)   acc.activeCharacter   = 'brownbear';
     if (!acc.teamChars)         acc.teamChars         = [acc.activeCharacter || 'brownbear'];
+    if (!acc.extraTeamSlots)    acc.extraTeamSlots    = 0;
     if (!acc.charKills)         acc.charKills         = {};
     if (!acc.lastBossRun)       acc.lastBossRun       = 0;
     if (!acc.bossKills)         acc.bossKills         = 0;
@@ -821,27 +822,33 @@ function speciesCount(acc, petId) {
     var owned      = acc.characters || ['brownbear'];
     var team       = acc.teamChars && acc.teamChars.length ? acc.teamChars : [acc.activeCharacter || 'brownbear'];
     var charKills  = acc.charKills || {};
+    var maxTeam    = 3 + (acc.extraTeamSlots || 0);
     var allCharsMap = {};
     (window.CHARACTERS || []).concat(window.CHEST_CHARS || []).forEach(function(c) { allCharsMap[c.id] = c; });
 
     // Team slots header
-    var teamHtml = '<div class="weapon-cat-title" style="color:#ffd700">⚔️ Your Team (' + team.length + '/3)</div>';
-    teamHtml += '<div style="display:flex;gap:8px;padding:6px 0 10px;">';
-    for (var ts = 0; ts < 3; ts++) {
+    var teamHtml = '<div class="weapon-cat-title" style="color:#ffd700">⚔️ Your Team (' + team.length + '/' + maxTeam + ')</div>';
+    teamHtml += '<div style="display:flex;gap:8px;padding:6px 0 10px;flex-wrap:wrap;">';
+    for (var ts = 0; ts < maxTeam; ts++) {
       var tid = team[ts];
       var tc  = tid ? allCharsMap[tid] : null;
       if (tc) {
         var tkills = charKills[tc.id] || 0;
         var blastUnlocked = tkills >= 100;
-        teamHtml += '<div style="flex:1;text-align:center;padding:6px;background:rgba(255,215,0,0.08);border:1px solid #ffd700;border-radius:6px;font-size:11px;">';
+        teamHtml += '<div style="flex:1;min-width:70px;text-align:center;padding:6px;background:rgba(255,215,0,0.08);border:1px solid #ffd700;border-radius:6px;font-size:11px;">';
         teamHtml += '<div style="font-size:22px">' + tc.e + '</div>';
         teamHtml += '<div style="color:#fff;font-weight:bold">' + tc.n + '</div>';
         teamHtml += '<div style="color:' + (blastUnlocked ? '#ffff00' : '#a0a0a0') + '">' + (blastUnlocked ? '💥 Blast OK' : tkills + '/100 kills') + '</div>';
         teamHtml += '</div>';
       } else {
-        teamHtml += '<div style="flex:1;text-align:center;padding:6px;background:rgba(80,80,80,0.12);border:1px dashed #604080;border-radius:6px;color:#604080;font-size:11px;display:flex;align-items:center;justify-content:center">Empty slot</div>';
+        teamHtml += '<div style="flex:1;min-width:70px;text-align:center;padding:6px;background:rgba(80,80,80,0.12);border:1px dashed #604080;border-radius:6px;color:#604080;font-size:11px;display:flex;align-items:center;justify-content:center">Empty slot</div>';
       }
     }
+    teamHtml += '</div>';
+    var canBuySlot = (acc.emeralds || 0) >= 100;
+    teamHtml += '<div style="text-align:center;margin-bottom:10px;">';
+    teamHtml += '<button class="btn" style="font-size:13px;padding:6px 14px;' + (canBuySlot ? '' : 'opacity:0.5;') + '" onclick="buyExtraTeamSlot()">';
+    teamHtml += '+ Extra slot — 100 💚 (you have ' + (acc.emeralds || 0) + ' 💚)</button>';
     teamHtml += '</div>';
 
     var html = teamHtml;
@@ -936,19 +943,29 @@ function speciesCount(acc, petId) {
     var inNormal = (acc.characters || []).indexOf(id) >= 0;
     var inChest  = (acc.chestChars  || []).indexOf(id) >= 0;
     if (!inNormal && !inChest) return;
+    var maxTeam = 3 + (acc.extraTeamSlots || 0);
     var team = acc.teamChars ? acc.teamChars.slice() : [acc.activeCharacter || 'brownbear'];
     var idx  = team.indexOf(id);
     if (idx >= 0) {
       if (team.length <= 1) return;
       team.splice(idx, 1);
     } else {
-      if (team.length >= 3) { showNotifBox('<div class="notif-title">Team Full!</div><div class="notif-body">Remove a character from your team first (max 3).</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
+      if (team.length >= maxTeam) { showNotifBox('<div class="notif-title">Team Full!</div><div class="notif-body">Remove a character first (max ' + maxTeam + ').<br>Buy extra slots with 💚 emeralds in the Characters tab.</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
       team.push(id);
     }
     acc.teamChars      = team;
     acc.activeCharacter = team[0];
     saveAccount(acc);
     window.showCharacters();
+  };
+
+  window.buyExtraTeamSlot = function() {
+    var acc = ensureItems(getAccount());
+    if ((acc.emeralds || 0) < 100) { showNotifBox('<div class="notif-title">Not enough 💚</div><div class="notif-body">You need 100 emeralds. You have ' + (acc.emeralds||0) + '.</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
+    acc.emeralds -= 100;
+    acc.extraTeamSlots = (acc.extraTeamSlots || 0) + 1;
+    saveAccount(acc);
+    showNotifBox('<div class="notif-title">✅ Slot Unlocked!</div><div class="notif-body">Your team can now hold ' + (3 + acc.extraTeamSlots) + ' characters.</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';window.showCharacters();})()">Nice!</button>');
   };
 
   // ── Exchange (rubies → emeralds) ──────────────────────────
