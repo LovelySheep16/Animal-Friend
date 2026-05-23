@@ -138,11 +138,7 @@ function makeChestPet(lv) {
   } else if (a.role === 'heal') {
     p.heal = Math.round(5 + t*60); p.hi = Math.max(800, Math.round(3500 - t*2200));
     p.d = 'Heals ' + p.heal + 'hp / ' + (p.hi/1000).toFixed(1) + 's';
-    if (t >= 0.5) {
-      p.atkHeal = Math.round(p.heal * 0.25);
-      p.atkHi   = Math.max(600, Math.round(p.hi * 0.4));
-      p.d += ' · pulse +' + p.atkHeal + 'hp';
-    }
+    if (t >= 0.5) { p.selfHeal = true; p.d += ' · self +20hp/100s'; }
   } else if (a.role === 'tank') {
     p.sc = parseFloat(Math.min(0.80, 0.12 + t*0.65).toFixed(2));
     p.atk = Math.round(3 + t*28); p.ar = 1800;
@@ -410,7 +406,7 @@ function Game() {
   // Team system
   this.team = []; this.teamIdx = 0;
   this.teamHp = []; this.teamBlastCharge = []; this.teamBlastReady = [];
-  this.teamDeadThisRun = []; this.teamRunKills = []; this.teamHealTim = []; this.teamAtkHealTim = [];
+  this.teamDeadThisRun = []; this.teamRunKills = []; this.teamHealTim = []; this.teamSelfHealTim = [];
   this.charKillsData = {};
   // Boss run
   this.isBossRun = false; this.bossLasers = []; this.bossKills = 0; this.bossPetDmg = 10;
@@ -1393,26 +1389,19 @@ Game.prototype.update = function(dt) {
     }
   }
 
-  // Strong team healers (t>=0.5): fast pulse heal — less than the big heal, same targets
-  for (var _ai = 0; _ai < this.team.length; _ai++) {
-    var _aC = this.team[_ai];
-    if (!_aC || _aC.role !== 'heal' || !_aC.atkHeal || !_aC.atkHi) continue;
-    if (this.teamDeadThisRun[_ai]) continue;
-    if (!this.teamAtkHealTim[_ai]) this.teamAtkHealTim[_ai] = nowH;
-    if (nowH - this.teamAtkHealTim[_ai] < _aC.atkHi) continue;
-    this.teamAtkHealTim[_ai] = nowH;
-    var _aAmt = _aC.atkHeal;
-    p.hp = Math.min(p.mhp, p.hp + _aAmt);
-    this.fl(p.x, p.y - 14, '+' + _aAmt + '❤ ' + _aC.e, '#88ffaa');
-    var _selfA = this;
-    this.pts.forEach(function(pt) {
-      if (pt.dead || !pt.mhp) return;
-      pt.hp = Math.min(pt.mhp, pt.hp + _aAmt);
-      _selfA.fl(pt.x, pt.y - 10, '+' + _aAmt + '❤', '#88ffaa');
-    });
-    for (var _aj = 0; _aj < this.team.length; _aj++) {
-      if (_aj === this.teamIdx) continue;
-      if (!this.teamDeadThisRun[_aj]) this.teamHp[_aj] = Math.min(p.mhp, this.teamHp[_aj] + _aAmt);
+  // Strong healer characters: heal only themselves +20hp every 100s
+  for (var _si = 0; _si < this.team.length; _si++) {
+    var _sC = this.team[_si];
+    if (!_sC || !_sC.selfHeal) continue;
+    if (this.teamDeadThisRun[_si]) continue;
+    if (!this.teamSelfHealTim[_si]) this.teamSelfHealTim[_si] = nowH;
+    if (nowH - this.teamSelfHealTim[_si] < 100000) continue;
+    this.teamSelfHealTim[_si] = nowH;
+    if (_si === this.teamIdx) {
+      p.hp = Math.min(p.mhp, p.hp + 20);
+      this.fl(p.x, p.y - 18, '+20❤ ' + _sC.e, '#88ffaa');
+    } else {
+      this.teamHp[_si] = Math.min(p.mhp, this.teamHp[_si] + 20);
     }
   }
 
@@ -1531,7 +1520,7 @@ Game.prototype.initTeam = function(config) {
   this.teamDeadThisRun  = this.team.map(function() { return false; });
   this.teamRunKills     = this.team.map(function() { return 0; });
   this.teamHealTim      = this.team.map(function() { return 0; });
-  this.teamAtkHealTim   = this.team.map(function() { return 0; });
+  this.teamSelfHealTim  = this.team.map(function() { return 0; });
   this.charKillsData    = (config && config.charKills) || {};
   this.charDef          = this.team[0] || null;
   this.p.hp             = this.teamHp[0];
