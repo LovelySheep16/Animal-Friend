@@ -397,6 +397,9 @@ function Game() {
   this.monstersKilled = 0; this.wallsBroken = 0; this.volcanoGems = 0;
   // Portals & moving walls
   this.portals = []; this.portalCool = {}; this.wallMoveTimer = 10000;
+  // Alt maze (realm portal)
+  this.inAltMaze = false; this.savedMazeState = null; this.altMazeState = null;
+  this.realmReturnX = T*3; this.realmReturnY = GT+T*3;
   // Characters & blast
   this.charDef = null; this.blastCharge = 0; this.blastReady = false; this.digRubies = 0;
   // Team system
@@ -500,6 +503,9 @@ Game.prototype.build = function() {
     tw.x = tpos.x; tw.y = tpos.y;
     if (!this.towerAtk[tw.uid]) this.towerAtk[tw.uid] = n;
   }
+  // Pre-generate the alt maze for the realm portal
+  this.inAltMaze = false; this.savedMazeState = null;
+  this.altMazeState = this.buildAltMazeState();
 };
 
 Game.prototype.genMap = function(li, C, R) {
@@ -553,6 +559,95 @@ Game.prototype.genMap = function(li, C, R) {
   return m;
 };
 
+Game.prototype.getMazeState = function() {
+  return {
+    map: this.map, wallHp: this.wallHp,
+    mons: this.mons, chest: this.chest, chestPet: this.chestPet, alreadyOwned: this.alreadyOwned,
+    gemChests: this.gemChests, boxes: this.boxes,
+    volcano: this.volcano, lavaStreams: this.lavaStreams, lavaBlasts: this.lavaBlasts,
+    lavaStreamLen: this.lavaStreamLen, volcanoCooldown: this.volcanoCooldown,
+    portals: this.portals, portalCool: this.portalCool,
+    towers: this.towers, pairTimers: this.pairTimers, wallMoveTimer: this.wallMoveTimer
+  };
+};
+
+Game.prototype.setMazeState = function(s) {
+  this.map = s.map; this.wallHp = s.wallHp;
+  this.mons = s.mons; this.chest = s.chest; this.chestPet = s.chestPet; this.alreadyOwned = s.alreadyOwned;
+  this.gemChests = s.gemChests; this.boxes = s.boxes;
+  this.volcano = s.volcano; this.lavaStreams = s.lavaStreams; this.lavaBlasts = s.lavaBlasts;
+  this.lavaStreamLen = s.lavaStreamLen; this.volcanoCooldown = s.volcanoCooldown;
+  this.portals = s.portals; this.portalCool = s.portalCool;
+  this.towers = s.towers; this.pairTimers = s.pairTimers; this.wallMoveTimer = s.wallMoveTimer;
+};
+
+Game.prototype.buildAltMazeState = function() {
+  // Temporarily swap map so rf() places things correctly in the alt maze
+  var origMap = this.map, origP = this.p;
+  var altMap  = this.genMap(this.ld.li, this.C, this.R);
+  this.map = altMap;
+  this.p   = { x: T*3, y: GT+T*3 };
+
+  var altMons = this.spawnMons();
+
+  // Gem chests
+  var altGemChests = [];
+  var gcCount = 1 + Math.floor(Math.random() * 3);
+  for (var g = 0; g < gcCount; g++) {
+    var gp = this.rf();
+    altGemChests.push({ x:gp.x, y:gp.y, gems: 5 + Math.floor(Math.random()*15), open:false });
+  }
+  // Boxes (presents)
+  var altBoxes = [];
+  for (var b = 0; b < 10 + Math.floor(Math.random()*6); b++) {
+    var bp = this.rf(); altBoxes.push({ x:bp.x, y:bp.y });
+  }
+  // Return realm portal (red)
+  var rp = this.rf();
+  var returnPortal = { x:rp.x, y:rp.y, color:'#ff2200', pair:-1, linkTo:-1, isReturn:true };
+
+  // Restore original state
+  this.map = origMap; this.p = origP;
+
+  return {
+    map: altMap, wallHp: {},
+    mons: altMons, chest: null, chestPet: null, alreadyOwned: true,
+    gemChests: altGemChests, boxes: altBoxes,
+    volcano: null, lavaStreams: [], lavaBlasts: [], lavaStreamLen: 50, volcanoCooldown: 99999,
+    portals: [returnPortal], portalCool: {},
+    towers: [], pairTimers: {}, wallMoveTimer: 10000
+  };
+};
+
+Game.prototype.enterAltMaze = function() {
+  if (this.inAltMaze) return;
+  this.savedMazeState = this.getMazeState();
+  this.realmReturnX = this.p.x; this.realmReturnY = this.p.y;
+  if (!this.altMazeState) this.altMazeState = this.buildAltMazeState();
+  this.setMazeState(this.altMazeState);
+  this.inAltMaze = true;
+  // Place player at the return portal
+  var rp = this.portals[0];
+  this.p.x = rp ? rp.x + T*2 : T*4; this.p.y = rp ? rp.y : GT+T*4;
+  this.portalCool[0] = Date.now() + 2000;
+  this.fl(this.p.x, this.p.y - 30, '🌍 Another realm!', '#ff2200');
+  this.showBanner();
+};
+
+Game.prototype.exitAltMaze = function() {
+  if (!this.inAltMaze) return;
+  this.altMazeState = this.getMazeState(); // save progress in alt maze
+  this.setMazeState(this.savedMazeState);
+  this.inAltMaze = false;
+  this.p.x = this.realmReturnX; this.p.y = this.realmReturnY;
+  // Cool down the realm portals so player doesn't instantly re-enter
+  for (var i = 0; i < this.portals.length; i++) {
+    if (this.portals[i].isRealm) this.portalCool[i] = Date.now() + 2000;
+  }
+  this.fl(this.p.x, this.p.y - 30, '🌀 Back to your realm!', '#8844ff');
+  this.showBanner();
+};
+
 Game.prototype.genPortals = function() {
   this.portals = [];
   if (this.isBossRun) return;
@@ -587,6 +682,10 @@ Game.prototype.genPortals = function() {
     }
   }
   this.portals = placed.filter(function(p) { return p.linkTo !== -1; });
+  // First portal pair is always the realm portal (leads to alt maze)
+  for (var ri = 0; ri < this.portals.length; ri++) {
+    if (this.portals[ri].pair === 0) { this.portals[ri].isRealm = true; this.portals[ri].color = '#ff2200'; }
+  }
 };
 
 // Returns {pa, pb} if there is a portal route from (fx1,fy1) to (tx,ty) within range
@@ -1118,9 +1217,17 @@ Game.prototype.update = function(dt) {
   var nowPortal = Date.now();
   for (var pti = 0; pti < this.portals.length; pti++) {
     var portal = this.portals[pti];
-    if (portal.linkTo < 0) continue;
     if (nowPortal < (this.portalCool[pti] || 0)) continue;
     if (Math.hypot(p.x - portal.x, p.y - portal.y) < 22) {
+      if (portal.isReturn) {
+        this.portalCool[pti] = nowPortal + 2000;
+        this.exitAltMaze(); break;
+      }
+      if (portal.isRealm) {
+        this.portalCool[pti] = nowPortal + 2000;
+        this.enterAltMaze(); break;
+      }
+      if (portal.linkTo < 0) continue;
       var dest = this.portals[portal.linkTo];
       p.x = dest.x; p.y = dest.y;
       this.portalCool[portal.linkTo] = nowPortal + 1500;
@@ -1520,7 +1627,7 @@ Game.prototype.openChest = function() {
 
 Game.prototype.showBanner = function() {
   var el = document.getElementById('banner');
-  el.textContent = this.ld ? this.ld.name : 'Level ' + (this.lv + 1);
+  el.textContent = this.inAltMaze ? '🌍 Alt Realm — Level ' + (this.lv + 1) : (this.ld ? this.ld.name : 'Level ' + (this.lv + 1));
   el.style.opacity = '1';
   setTimeout(function() { el.style.opacity = '0'; }, 1600);
 };
@@ -1693,7 +1800,7 @@ Game.prototype.draw = function() {
     ctx.beginPath(); ctx.arc(portal.x, portal.y, 18 + pulse * 4, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.font = '18px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🌀', portal.x, portal.y);
+    ctx.fillText(portal.isRealm || portal.isReturn ? '🌍' : '🌀', portal.x, portal.y);
     ctx.restore();
   });
 
