@@ -657,7 +657,10 @@ Game.prototype.genPortals = function() {
   this.portals = [];
   if (this.isBossRun) return;
   var COLORS = ['#8844ff', '#ff3399', '#00ffcc', '#ffaa00'];
-  var numPairs = 1 + Math.floor(Math.random() * 4); // 1-4 pairs
+  // More realm (world) portals at higher levels: 1 at lv0, +1 every 15 levels, max 5
+  var numRealmPairs  = Math.min(5, 1 + Math.floor(this.lv / 15));
+  // Total pairs: realm pairs + 1-3 random regular pairs
+  var numPairs = numRealmPairs + 1 + Math.floor(Math.random() * 3);
   var placed = [];
   for (var pi = 0; pi < numPairs; pi++) {
     for (var side = 0; side < 2; side++) {
@@ -672,7 +675,7 @@ Game.prototype.genPortals = function() {
           if (Math.abs(placed[j].c - c) + Math.abs(placed[j].r - r) < 4) { tooClose = true; break; }
         }
         if (tooClose) continue;
-        placed.push({ r:r, c:c, x:px, y:py, pair:pi, color:COLORS[pi % COLORS.length], linkTo:-1 });
+        placed.push({ r:r, c:c, x:px, y:py, pair:pi, color:COLORS[(pi - numRealmPairs) % COLORS.length], linkTo:-1 });
         break;
       }
     }
@@ -687,9 +690,9 @@ Game.prototype.genPortals = function() {
     }
   }
   this.portals = placed.filter(function(p) { return p.linkTo !== -1; });
-  // First portal pair is always the realm portal (leads to alt maze)
+  // The first numRealmPairs pairs are all realm portals
   for (var ri = 0; ri < this.portals.length; ri++) {
-    if (this.portals[ri].pair === 0) { this.portals[ri].isRealm = true; this.portals[ri].color = '#ff2200'; }
+    if (this.portals[ri].pair < numRealmPairs) { this.portals[ri].isRealm = true; this.portals[ri].color = '#ff2200'; }
   }
 };
 
@@ -1331,6 +1334,23 @@ Game.prototype.update = function(dt) {
         nearPet.hp = Math.max(0, nearPet.hp - nDmg);
         self.fl(nearPet.x, nearPet.y - 8, '-' + nDmg, '#ff6644');
         if (nearPet.hp <= 0) self.killPet(nearPet);
+      }
+    }
+    // Monster portal teleportation
+    if (!m.dead && self.portals.length > 1) {
+      var mNow = Date.now();
+      if (!m.portalCoolUntil || mNow >= m.portalCoolUntil) {
+        for (var mpi = 0; mpi < self.portals.length; mpi++) {
+          var mp = self.portals[mpi];
+          if (mp.linkTo < 0 || mp.isReturn) continue;
+          if (Math.hypot(m.x - mp.x, m.y - mp.y) < 22) {
+            var mdest = self.portals[mp.linkTo];
+            m.x = mdest.x; m.y = mdest.y;
+            m.portalCoolUntil = mNow + 2000;
+            self.burst(mdest.x, mdest.y, mp.color, 8);
+            break;
+          }
+        }
       }
     }
   });
