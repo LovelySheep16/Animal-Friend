@@ -73,6 +73,29 @@
   ];
   window.SERVANTS = SERVANTS;
 
+  // ── Emerald Servants (100 total, cost + earn emeralds) ────────────────────
+  var EM_SV_DEFS = [
+    {cat:'🌾 Farmers',    e:'🌾', names:['Peasant','Farmhand','Crop Grower','Field Tiller','Harvest Scout','Emerald Planter','Verdant Worker','Grove Keeper','Nature Warden','Ancient Farmer'],        base:1.0, costBase:8},
+    {cat:'⛏️ Miners',     e:'⛏️', names:['Digger','Rock Breaker','Cave Scout','Gem Seeker','Deep Miner','Crystal Cutter','Vein Tapper','Emerald Diver','Core Breaker','Master Miner'],               base:1.2, costBase:10},
+    {cat:'🔬 Scientists', e:'🔬', names:['Lab Helper','Researcher','Analyst','Scientist','Senior Scientist','Head Researcher','Lab Director','Emerald Theorist','Grand Scientist','Nobel Scholar'],    base:1.4, costBase:12},
+    {cat:'🧪 Alchemists', e:'🧪', names:['Novice','Brewer','Potion Maker','Alchemist','Master Alchemist','Transmuter','Gem Brewer','Emerald Mixer','Philosopher','Elder Alchemist'],                   base:1.6, costBase:14},
+    {cat:'🌊 Sailors',    e:'🌊', names:['Cabin Boy','Deckhand','Sailor','First Mate','Navigator','Captain','Sea Captain','Fleet Admiral','Ocean Master','Grand Admiral'],                              base:1.8, costBase:16},
+    {cat:'🎨 Artisans',   e:'🎨', names:['Apprentice','Crafter','Artisan','Jeweler','Gem Cutter','Master Artisan','Guild Master','Emerald Smith','Grand Artisan','Artisan Legend'],                    base:2.0, costBase:18},
+    {cat:'🏛️ Scholars',   e:'📜', names:['Student','Scribe','Librarian','Scholar','Senior Scholar','Lore Keeper','Sage','Grand Sage','Emerald Sage','Eternal Scholar'],                               base:2.2, costBase:20},
+    {cat:'🌺 Gardeners',  e:'🌺', names:['Seedling','Gardener','Botanist','Flower Keeper','Herb Master','Garden Sage','Bloom Warden','Emerald Gardener','Nature Sage','Garden Deity'],                base:2.4, costBase:22},
+    {cat:'🔮 Seers',      e:'🔮', names:['Apprentice Seer','Vision Seeker','Oracle Acolyte','Seer','Crystal Reader','Future Seer','Grand Seer','Emerald Prophet','Fate Weaver','Eternal Seer'],       base:2.6, costBase:24},
+    {cat:'🌌 Star Gazers',e:'🌠', names:['Star Watcher','Sky Scout','Astronomer','Star Sage','Celestial Guide','Cosmos Reader','Void Gazer','Emerald Stargazer','Cosmic Observer','Star Deity'],      base:3.0, costBase:28},
+  ];
+  var EMERALD_SERVANTS = [];
+  EM_SV_DEFS.forEach(function(def) {
+    def.names.forEach(function(name, ti) {
+      var eph  = Math.round((def.base + ti * 1.6) * 10) / 10;
+      var cost = Math.round(def.costBase * (1 + ti * 1.3));
+      EMERALD_SERVANTS.push({ id:'emSv_' + def.cat.replace(/\W+/g,'') + ti, e:def.e, n:name, eph:eph, cost:cost, cat:def.cat });
+    });
+  });
+  window.EMERALD_SERVANTS = EMERALD_SERVANTS;
+
   var CHARACTERS = [
     // ── Bears (starter class — bear is free) ────────────────
     {id:'brownbear',   e:'🐻', n:'Brown Bear',     cat:'🐻 Bears',      cost:0,    atkBonus:0,   blast:'damage', blastPow:1.0},
@@ -565,7 +588,9 @@
     if (!acc.characters)        acc.characters        = ['brownbear'];
     if (!acc.activeCharacter)   acc.activeCharacter   = 'brownbear';
     if (!acc.teamChars)         acc.teamChars         = [acc.activeCharacter || 'brownbear'];
-    if (!acc.extraTeamSlots)    acc.extraTeamSlots    = 0;
+    if (!acc.extraTeamSlots)      acc.extraTeamSlots      = 0;
+    if (!acc.emeraldServants)     acc.emeraldServants     = {};
+    if (!acc.lastEmServantCollect)acc.lastEmServantCollect= Date.now();
     if (!acc.charKills)         acc.charKills         = {};
     if (!acc.lastBossRun)       acc.lastBossRun       = 0;
     if (!acc.bossKills)         acc.bossKills         = 0;
@@ -1415,31 +1440,63 @@ function speciesCount(acc, petId) {
     var pending = calcServantIncome(acc);
     var pendEl = document.getElementById('servant-pending');
     if (pendEl) pendEl.textContent = pending.rubies > 0 || pending.pets > 0
-      ? '📦 Ready to collect: +' + pending.rubies + ' 🔴' + (pending.pets > 0 ? ' · +' + pending.pets + ' pet(s)' : '')
+      ? '📦 Ready: +' + pending.rubies + ' 🔴' + (pending.pets > 0 ? ' · +' + pending.pets + ' pet(s)' : '')
       : 'Servants are working… check back later!';
     var grid = document.getElementById('servant-grid');
-    if (!grid) return;
-    var cats = ['⚔️ Knights','🤖 Robots','🧙 Witches','💊 Healers','🌟 Legends'];
-    var html = '';
-    cats.forEach(function(cat) {
-      html += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
-      SERVANTS.filter(function(sv) { return sv.cat === cat; }).forEach(function(sv) {
-        var owned   = acc.servants[sv.id] || 0;
-        var svcost  = subCost(sv.cost);
-        var canBuy  = acc.rubies >= svcost;
-        var safeId  = sv.id.replace(/'/g, "\\'");
-        html += '<div class="weapon-item">' +
-          '<div class="weapon-emoji">' + sv.e + '</div>' +
-          '<div class="weapon-name">' + sv.n + '</div>' +
-          '<div class="weapon-stats">+' + sv.rph + ' 🔴/hr' + (sv.pph > 0 ? ' · ' + Math.round(sv.pph*100) + '% pet/hr' : '') + '</div>' +
-          (owned ? '<div class="weapon-level">Owned: ' + owned + '</div>' : '') +
-          '<div class="weapon-btns"><button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
-          (canBuy ? ' onclick="buyServant(\'' + safeId + '\')"' : ' disabled') + '>' +
-          'Buy ' + svcost + ' 🔴</button></div></div>';
+    if (grid) {
+      var cats = ['⚔️ Knights','🤖 Robots','🧙 Witches','💊 Healers','🌟 Legends'];
+      var html = '';
+      cats.forEach(function(cat) {
+        html += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
+        SERVANTS.filter(function(sv) { return sv.cat === cat; }).forEach(function(sv) {
+          var owned   = acc.servants[sv.id] || 0;
+          var svcost  = subCost(sv.cost);
+          var canBuy  = acc.rubies >= svcost;
+          var safeId  = sv.id.replace(/'/g, "\\'");
+          html += '<div class="weapon-item">' +
+            '<div class="weapon-emoji">' + sv.e + '</div>' +
+            '<div class="weapon-name">' + sv.n + '</div>' +
+            '<div class="weapon-stats">+' + sv.rph + ' 🔴/hr' + (sv.pph > 0 ? ' · ' + Math.round(sv.pph*100) + '% pet/hr' : '') + '</div>' +
+            (owned ? '<div class="weapon-level">Owned: ' + owned + '</div>' : '') +
+            '<div class="weapon-btns"><button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
+            (canBuy ? ' onclick="buyServant(\'' + safeId + '\')"' : ' disabled') + '>' +
+            'Buy ' + svcost + ' 🔴</button></div></div>';
+        });
+        html += '</div>';
       });
-      html += '</div>';
-    });
-    grid.innerHTML = html;
+      grid.innerHTML = html;
+    }
+    // Emerald servants
+    var emEl = document.getElementById('em-servant-emeralds');
+    if (emEl) emEl.textContent = (acc.emeralds || 0) + ' 💚';
+    var emPend = document.getElementById('em-servant-pending');
+    var emIncome = calcEmeraldServantIncome(acc);
+    if (emPend) emPend.textContent = emIncome > 0
+      ? '📦 Ready: +' + emIncome + ' 💚'
+      : 'Emerald servants are working… check back later!';
+    var emGrid = document.getElementById('em-servant-grid');
+    if (emGrid) {
+      var emCats = EM_SV_DEFS.map(function(d) { return d.cat; });
+      var emHtml = '';
+      emCats.forEach(function(cat) {
+        emHtml += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
+        EMERALD_SERVANTS.filter(function(sv) { return sv.cat === cat; }).forEach(function(sv) {
+          var owned  = (acc.emeraldServants || {})[sv.id] || 0;
+          var canBuy = (acc.emeralds || 0) >= sv.cost;
+          var sid    = sv.id.replace(/'/g, "\\'");
+          emHtml += '<div class="weapon-item">' +
+            '<div class="weapon-emoji">' + sv.e + '</div>' +
+            '<div class="weapon-name">' + sv.n + '</div>' +
+            '<div class="weapon-stats">+' + sv.eph + ' 💚/hr</div>' +
+            (owned ? '<div class="weapon-level">Owned: ' + owned + '</div>' : '') +
+            '<div class="weapon-btns"><button class="weapon-btn weapon-buy' + (canBuy ? '' : ' cant-buy') + '"' +
+            (canBuy ? ' onclick="buyEmeraldServant(\'' + sid + '\')"' : ' disabled') + '>' +
+            'Buy ' + sv.cost + ' 💚</button></div></div>';
+        });
+        emHtml += '</div>';
+      });
+      emGrid.innerHTML = emHtml;
+    }
   }
 
   function calcServantIncome(acc) {
@@ -1487,6 +1544,38 @@ function speciesCount(acc, petId) {
     checkAwards(acc);
     saveAccount(acc);
     renderServants(acc);
+  };
+
+  function calcEmeraldServantIncome(acc) {
+    var elapsed = Math.min(24 * 3600000, Date.now() - (acc.lastEmServantCollect || Date.now()));
+    var hours   = elapsed / 3600000;
+    var emeralds = 0;
+    EMERALD_SERVANTS.forEach(function(sv) {
+      var count = (acc.emeraldServants || {})[sv.id] || 0;
+      if (count) emeralds += Math.floor(sv.eph * count * hours * 10) / 10;
+    });
+    return Math.floor(emeralds);
+  }
+
+  window.buyEmeraldServant = function(id) {
+    var acc = ensureItems(getAccount());
+    var sv  = EMERALD_SERVANTS.find(function(x) { return x.id === id; });
+    if (!sv || (acc.emeralds || 0) < sv.cost) return;
+    acc.emeralds -= sv.cost;
+    acc.emeraldServants[id] = (acc.emeraldServants[id] || 0) + 1;
+    saveAccount(acc);
+    renderServants(acc);
+  };
+
+  window.collectEmeraldServants = function() {
+    var acc    = ensureItems(getAccount());
+    var income = calcEmeraldServantIncome(acc);
+    if (!income) return;
+    acc.emeralds = (acc.emeralds || 0) + income;
+    acc.lastEmServantCollect = Date.now();
+    saveAccount(acc);
+    renderServants(acc);
+    showNotifBox('<div class="notif-title">💚 Collected!</div><div class="notif-body">+' + income + ' emeralds from your emerald servants.</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">Nice!</button>');
   };
 
   // ── Weapon Shop ───────────────────────────────────────────────────────────
