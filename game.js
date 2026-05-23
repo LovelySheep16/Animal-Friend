@@ -138,7 +138,7 @@ function makeChestPet(lv) {
   } else if (a.role === 'heal') {
     p.heal = Math.round(5 + t*60); p.hi = Math.max(800, Math.round(3500 - t*2200));
     p.d = 'Heals ' + p.heal + 'hp / ' + (p.hi/1000).toFixed(1) + 's';
-    if (t >= 0.5) { p.selfHeal = true; p.d += ' · self +20hp/100s'; }
+    if (t >= 0.5) { p.d += ' · self +20hp/100s'; }
   } else if (a.role === 'tank') {
     p.sc = parseFloat(Math.min(0.80, 0.12 + t*0.65).toFixed(2));
     p.atk = Math.round(3 + t*28); p.ar = 1800;
@@ -1356,16 +1356,18 @@ Game.prototype.update = function(dt) {
     if (this.potionTick >= 20) { this.potionTick -= 20; p.hp = Math.min(p.mhp, p.hp + 10 * this.upg.potion); }
   }
 
-  // Team healer characters: heal pets, active player, and all teammates (revive dead ones)
+  // Team healer characters (blast:'heal'): heal pets, active player, and all teammates (revive dead ones)
   var nowH = Date.now();
   for (var _ti = 0; _ti < this.team.length; _ti++) {
     var _tChar = this.team[_ti];
-    if (!_tChar || _tChar.role !== 'heal' || !_tChar.heal || !_tChar.hi) continue;
+    if (!_tChar || _tChar.blast !== 'heal') continue;
     if (this.teamDeadThisRun[_ti]) continue;
+    var _tPow = _tChar.blastPow || 1;
+    var _tHi  = Math.max(2500, Math.round(7000 - _tPow * 600));
+    var _hAmt = Math.round(_tPow * 8);
     if (!this.teamHealTim[_ti]) this.teamHealTim[_ti] = nowH;
-    if (nowH - this.teamHealTim[_ti] < _tChar.hi) continue;
+    if (nowH - this.teamHealTim[_ti] < _tHi) continue;
     this.teamHealTim[_ti] = nowH;
-    var _hAmt = _tChar.heal;
     // Heal active player
     p.hp = Math.min(p.mhp, p.hp + _hAmt);
     this.fl(p.x, p.y - 22, '+' + _hAmt + '❤️ ' + _tChar.e, '#30ff70');
@@ -1389,10 +1391,10 @@ Game.prototype.update = function(dt) {
     }
   }
 
-  // Strong healer characters: heal only themselves +20hp every 100s
+  // Strong healer characters (blastPow >= 4.5): self-heal +20hp every 100s
   for (var _si = 0; _si < this.team.length; _si++) {
     var _sC = this.team[_si];
-    if (!_sC || !_sC.selfHeal) continue;
+    if (!_sC || _sC.blast !== 'heal' || (_sC.blastPow || 0) < 4.5) continue;
     if (this.teamDeadThisRun[_si]) continue;
     if (!this.teamSelfHealTim[_si]) this.teamSelfHealTim[_si] = nowH;
     if (nowH - this.teamSelfHealTim[_si] < 100000) continue;
