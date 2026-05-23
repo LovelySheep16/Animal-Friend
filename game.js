@@ -393,11 +393,20 @@ function Game() {
   this.chest = null; this.chestPet = null; this.alreadyOwned = false;
   this.boxes = []; this.gemChests = []; this.petTrail = [];
   this.volcano = null; this.lavaBlasts = []; this.volcanoCooldown = 0;
+  this.lavaStreams = []; this.lavaStreamLen = 50;
   this.monstersKilled = 0; this.wallsBroken = 0; this.volcanoGems = 0;
+  // Portals & moving walls
+  this.portals = []; this.portalCool = {}; this.wallMoveTimer = 10000;
   // Characters & blast
   this.charDef = null; this.blastCharge = 0; this.blastReady = false; this.digRubies = 0;
+  // Team system
+  this.team = []; this.teamIdx = 0;
+  this.teamHp = []; this.teamBlastCharge = []; this.teamBlastReady = [];
+  this.teamDeadThisRun = []; this.teamRunKills = [];
+  this.charKillsData = {};
   // Boss run
   this.isBossRun = false; this.bossLasers = []; this.bossKills = 0; this.bossPetDmg = 10;
+  this.voidPhase = false; this.voidKills = 0;
   // Food
   this.foodAtk = 0;
   // Debuffs (applied by blasts)
@@ -410,6 +419,7 @@ Game.prototype.build = function() {
   this.C = Math.floor(canvas.width / T); this.R = Math.floor(GH / T);
   this.map = this.genMap(this.ld.li, this.C, this.R);
   this.wallHp = {};
+  this.genPortals(); this.portalCool = {}; this.wallMoveTimer = 10000;
   this.p = {x: T*3, y: GT+T*3, hp: 100, mhp: 100, atk: false, at: 0, dir: 1, inv: 0};
   this.mons = this.spawnMons(); this.aa = 0;
 
@@ -447,7 +457,7 @@ Game.prototype.build = function() {
   // Spawn volcano
   var vpos = this.rf();
   this.volcano = { x: vpos.x, y: vpos.y };
-  this.lavaBlasts = []; this.volcanoCooldown = 4000;
+  this.lavaBlasts = []; this.lavaStreams = []; this.lavaStreamLen = 50; this.volcanoCooldown = 4000;
 
   // Spawn boxes (avoid player start area)
   this.boxes = [];
@@ -543,6 +553,96 @@ Game.prototype.genMap = function(li, C, R) {
   return m;
 };
 
+Game.prototype.genPortals = function() {
+  this.portals = [];
+  if (this.isBossRun) return;
+  var COLORS = ['#8844ff', '#ff3399', '#00ffcc', '#ffaa00'];
+  var numPairs = 1 + Math.floor(Math.random() * 4); // 1-4 pairs
+  var placed = [];
+  for (var pi = 0; pi < numPairs; pi++) {
+    for (var side = 0; side < 2; side++) {
+      for (var attempt = 0; attempt < 300; attempt++) {
+        var c = 1 + Math.floor(Math.random() * (this.C - 2));
+        var r = 1 + Math.floor(Math.random() * (this.R - 2));
+        if (this.map[r][c]) continue;
+        var px = c * T + T/2, py = GT + r * T + T/2;
+        if (Math.hypot(px - T*3, py - (GT+T*3)) < T*5) continue;
+        var tooClose = false;
+        for (var j = 0; j < placed.length; j++) {
+          if (Math.abs(placed[j].c - c) + Math.abs(placed[j].r - r) < 4) { tooClose = true; break; }
+        }
+        if (tooClose) continue;
+        placed.push({ r:r, c:c, x:px, y:py, pair:pi, color:COLORS[pi % COLORS.length], linkTo:-1 });
+        break;
+      }
+    }
+  }
+  // Link each portal to its pair partner
+  for (var i = 0; i < placed.length; i++) {
+    if (placed[i].linkTo !== -1) continue;
+    for (var k = 0; k < placed.length; k++) {
+      if (k !== i && placed[k].pair === placed[i].pair && placed[k].linkTo === -1) {
+        placed[i].linkTo = k; placed[k].linkTo = i; break;
+      }
+    }
+  }
+  this.portals = placed.filter(function(p) { return p.linkTo !== -1; });
+};
+
+// Returns {pa, pb} if there is a portal route from (fx1,fy1) to (tx,ty) within range
+Game.prototype.portalShot = function(fx1, fy1, tx, ty) {
+  var RANGE = 200;
+  for (var i = 0; i < this.portals.length; i++) {
+    var pa = this.portals[i];
+    if (pa.linkTo < 0) continue;
+    var pb = this.portals[pa.linkTo];
+    if (Math.hypot(fx1 - pa.x, fy1 - pa.y) < RANGE && Math.hypot(pb.x - tx, pb.y - ty) < RANGE) {
+      return { pa: pa, pb: pb };
+    }
+  }
+  return null;
+};
+
+Game.prototype.moveWalls = function() {
+  if (this.lv < 24 || this.isBossRun) return;
+  var DIRS = [[0,1],[0,-1],[1,0],[-1,0]];
+  var candidates = [];
+  for (var r = 1; r < this.R-1; r++) {
+    for (var c = 1; c < this.C-1; c++) {
+      if (this.map[r][c] === 1) candidates.push([r, c]);
+    }
+  }
+  // Shuffle
+  for (var si = candidates.length-1; si > 0; si--) {
+    var sj = Math.floor(Math.random() * (si+1));
+    var tmp = candidates[si]; candidates[si] = candidates[sj]; candidates[sj] = tmp;
+  }
+  var maxMove = Math.min(12, Math.ceil(candidates.length * 0.12));
+  var moved = 0, p = this.p;
+  for (var ci = 0; ci < candidates.length && moved < maxMove; ci++) {
+    var wr = candidates[ci][0], wc = candidates[ci][1];
+    if (!this.map[wr][wc]) continue;
+    var dir = DIRS[Math.floor(Math.random() * 4)];
+    var nr = wr + dir[0], nc = wc + dir[1];
+    if (nr < 1 || nr >= this.R-1 || nc < 1 || nc >= this.C-1) continue;
+    if (this.map[nr][nc]) continue;
+    var nx = nc * T + T/2, ny = GT + nr * T + T/2;
+    if (Math.hypot(nx - p.x, ny - p.y) < T*2) continue;
+    // Don't crush a portal
+    var crushesPortal = false;
+    for (var pti = 0; pti < this.portals.length; pti++) {
+      if (this.portals[pti].r === nr && this.portals[pti].c === nc) { crushesPortal = true; break; }
+    }
+    if (crushesPortal) continue;
+    this.map[wr][wc] = 0;
+    this.map[nr][nc] = 1;
+    var oldKey = wr + '_' + wc, newKey = nr + '_' + nc;
+    if (this.wallHp[oldKey] !== undefined) { this.wallHp[newKey] = this.wallHp[oldKey]; delete this.wallHp[oldKey]; }
+    moved++;
+  }
+  if (moved > 0) this.fl(p.x, p.y - 40, '⚡ Walls shift!', '#aaaaff');
+};
+
 Game.prototype.spawnMons = function() {
   var loop  = this.ld ? (this.ld.loop || 0) : Math.floor(this.lv / 50);
   var lm    = 1 + loop * 0.65;      // each loop adds 65% more difficulty
@@ -601,7 +701,8 @@ Game.prototype.buildBossLevel = function() {
   this.mons = [{ t:'Cosmic Terror', e:'🌠', hp:bossHp, mhp:bossHp, atk:bossAtk, spd:45, gem:0,
     x:bx, y:by, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isBoss:true, laserTimer:2000 }];
   this.bossLasers = []; this.chest = null; this.chestPet = null; this.alreadyOwned = true;
-  this.volcano = null; this.lavaBlasts = []; this.gemChests = []; this.boxes = [];
+  this.volcano = null; this.lavaBlasts = []; this.lavaStreams = []; this.gemChests = []; this.boxes = [];
+  this.portals = []; this.portalCool = {};
   this.blastCharge = 0; this.blastReady = false;
   var n = Date.now();
   for (var i = 0; i < this.pets.length; i++) {
@@ -616,6 +717,24 @@ Game.prototype.buildBossLevel = function() {
   this.showBanner();
 };
 
+Game.prototype.buildVoidPhase = function() {
+  var scale = Math.pow(2, this.voidKills || 0);
+  this.voidPhase = true;
+  this.trans     = false;
+  this.bossLasers = [];
+  var cx = Math.round(canvas.width * 0.5), cy = Math.round(GT + GH * 0.5);
+  var gen = this.voidKills > 0 ? ' (×' + scale + ')' : '';
+  this.mons = [
+    { t:'Void Stalker',    e:'🌑', hp:Math.round(3000*scale), mhp:Math.round(3000*scale), atk:Math.round(90*scale),  spd:50, gem:0, x:cx-140, y:cy, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isBoss:true, laserTimer:2500 },
+    { t:'Shadow Titan',    e:'🌒', hp:Math.round(4500*scale), mhp:Math.round(4500*scale), atk:Math.round(130*scale), spd:35, gem:0, x:cx,     y:cy-90, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isBoss:true, laserTimer:3000 },
+    { t:'Cosmic Devourer', e:'🌓', hp:Math.round(6000*scale), mhp:Math.round(6000*scale), atk:Math.round(160*scale), spd:28, gem:0, x:cx+140, y:cy, at:0, pat:0, mt:0, dx:0, dy:0, dead:false, isBoss:true, laserTimer:3500 },
+  ];
+  this.ld.name = '☠️ THE VOID' + gen + ' — Survive or lose everything!';
+  this.fl(this.p.x, this.p.y - 60, '☠️ THE VOID OPENS!', '#cc00ff');
+  this.fl(this.p.x, this.p.y - 40, 'Defeat all 3 — or lose!', '#ff6666');
+  this.showBanner();
+};
+
 Game.prototype.updateBossLasers = function(now) {
   var self = this, p = this.p, LASER_DMG = 50, LASER_PET_DMG = this.bossPetDmg || 10;
   this.bossLasers = this.bossLasers.filter(function(b) {
@@ -626,7 +745,7 @@ Game.prototype.updateBossLasers = function(now) {
       if (p.inv <= 0) {
         p.hp = Math.max(0, p.hp - LASER_DMG); p.inv = 400;
         self.burst(b.tx, b.ty, '#00ffff', 10); self.fl(b.tx, b.ty, '-' + LASER_DMG + '⚡', '#00ffff');
-        if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); }
+        if (p.hp <= 0 && !self.dead) { self.tryTeamTakeover(); }
       }
     } else { self.burst(b.tx, b.ty, '#0088aa', 5); }
     self.pets.forEach(function(pt) {
@@ -757,19 +876,40 @@ Game.prototype.updatePets = function(dt, now) {
         if (now - self.patk[uid] >= pt.ar) {
           self.patk[uid] = now;
           var fc = pt.id==='dragon'?'#ff7700':pt.id==='god'?'#ffff00':pt.id==='cerberus'?'#ff4400':'#70b0ff';
+          var habBonus = (window.META_habitatBonusIds && window.META_habitatBonusIds[pt.id]) ? 20 : 0;
+          var ptAtk = pt.atk + habBonus;
+          var volPs = vol2 && vol2D >= 260 ? self.portalShot(pt.x, pt.y, vol2.x, vol2.y) : null;
           if (vol2 && vol2D < 260) {
             self.gems += 1; self.score += 10; self.volcanoGems++;
             self.fx.push({x1:pt.x, y1:pt.y, x2:vol2.x, y2:vol2.y, l:200, c:'#ff6600'});
+            self.fl(vol2.x, vol2.y-10, '+1💎', '#ffd700');
+          } else if (vol2 && volPs) {
+            self.gems += 1; self.score += 10; self.volcanoGems++;
+            self.fx.push({x1:pt.x, y1:pt.y, x2:volPs.pa.x, y2:volPs.pa.y, l:200, c:volPs.pa.color});
+            self.fx.push({x1:volPs.pb.x, y1:volPs.pb.y, x2:vol2.x, y2:vol2.y, l:200, c:'#ff6600'});
             self.fl(vol2.x, vol2.y-10, '+1💎', '#ffd700');
           } else if (alive.length) {
             var tg = alive.reduce(function(a,b) { return Math.hypot(a.x-pt.x,a.y-pt.y)<Math.hypot(b.x-pt.x,b.y-pt.y)?a:b; });
             var tgD = Math.hypot(tg.x-pt.x, tg.y-pt.y);
             if (chstA && chstAD < tgD && chstAD < 260) {
               self.fx.push({x1:pt.x, y1:pt.y, x2:chstA.x, y2:chstA.y, l:200, c:'#ff8800'});
-              self.dmgChest(pt.atk);
+              self.dmgChest(ptAtk);
             } else if (tgD < 260) {
-              tg.hp -= pt.atk; self.fx.push({x1:pt.x, y1:pt.y, x2:tg.x, y2:tg.y, l:200, c:fc});
-              self.fl(tg.x, tg.y, '-'+pt.atk, '#ffd700'); if (tg.hp <= 0) self.kill(tg);
+              tg.hp -= ptAtk; self.fx.push({x1:pt.x, y1:pt.y, x2:tg.x, y2:tg.y, l:200, c:fc});
+              self.fl(tg.x, tg.y, '-'+ptAtk, '#ffd700'); if (tg.hp <= 0) self.kill(tg);
+            } else {
+              // Try portal shot at nearest portal-reachable monster
+              var psTg = null, psHit = null, psBestD = Infinity;
+              alive.forEach(function(m) {
+                var ps = self.portalShot(pt.x, pt.y, m.x, m.y);
+                if (ps) { var d = Math.hypot(m.x-pt.x, m.y-pt.y); if (d < psBestD) { psBestD = d; psTg = m; psHit = ps; } }
+              });
+              if (psTg && psHit) {
+                psTg.hp -= ptAtk;
+                self.fx.push({x1:pt.x, y1:pt.y, x2:psHit.pa.x, y2:psHit.pa.y, l:200, c:psHit.pa.color});
+                self.fx.push({x1:psHit.pb.x, y1:psHit.pb.y, x2:psTg.x, y2:psTg.y, l:200, c:psHit.pa.color});
+                self.fl(psTg.x, psTg.y, '-'+ptAtk, '#ffd700'); if (psTg.hp <= 0) self.kill(psTg);
+              }
             }
           } else if (chstA && chstAD < 260) {
             self.fx.push({x1:pt.x, y1:pt.y, x2:chstA.x, y2:chstA.y, l:200, c:'#ff8800'});
@@ -822,50 +962,75 @@ Game.prototype.updateTowers = function(dt, now) {
 
 
 
+function ptSegDist(px, py, x1, y1, x2, y2) {
+  var dx = x2-x1, dy = y2-y1, len2 = dx*dx+dy*dy;
+  if (!len2) return Math.hypot(px-x1, py-y1);
+  var t = Math.max(0, Math.min(1, ((px-x1)*dx+(py-y1)*dy)/len2));
+  return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+
 Game.prototype.updateVolcano = function(dt, now) {
   if (!this.volcano || this.dead || this.trans) return;
   var self = this, p = this.p, vol = this.volcano;
-  var LAVA_RADIUS = 36, WARN_MS = 1600;
+  var STREAM_W = 13, GROW_MS = 900;
+
+  // Fire a new stream
   this.volcanoCooldown -= dt * 1000;
   if (this.volcanoCooldown <= 0) {
     this.volcanoCooldown = 4500 + Math.random() * 2000;
-    var distToVol = Math.hypot(p.x - vol.x, p.y - vol.y);
-    var playerChance = Math.max(0.05, 1 - distToVol / 320);
-    var tx, ty;
-    if (Math.random() < playerChance) {
-      tx = p.x + (Math.random()-0.5)*60; ty = p.y + (Math.random()-0.5)*60;
-    } else { var tgt = this.rf(); tx = tgt.x; ty = tgt.y; }
-    this.lavaBlasts.push({ x:tx, y:ty, warnUntil:now+WARN_MS, done:false });
-  }
-  this.lavaBlasts = this.lavaBlasts.filter(function(b) {
-    if (b.done) return false;
-    if (now < b.warnUntil) return true;
-    b.done = true;
-    var dmg = Math.round(p.mhp * 0.30);
-    if (Math.hypot(p.x-b.x, p.y-b.y) < LAVA_RADIUS) {
-      p.hp = Math.max(0, p.hp - dmg);
-      self.burst(b.x, b.y, '#ff4400', 18); self.fl(b.x, b.y, '-'+dmg+'🔥', '#ff4400');
-      if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); }
-    } else { self.burst(b.x, b.y, '#ff6600', 14); }
-    self.pets.forEach(function(pt) {
-      if (pt.dead || pt.x === undefined) return;
-      if (Math.hypot(pt.x-b.x, pt.y-b.y) < LAVA_RADIUS) {
-        var pdmg = pt.mhp ? Math.round(pt.mhp * 0.30) : dmg;
-        pt.hp = Math.max(0, pt.hp - pdmg);
-        self.fl(pt.x, pt.y, '-'+pdmg+'🔥', '#ff4400');
-        if (pt.hp <= 0) self.killPet(pt);
+    this.lavaStreamLen += 100;
+    var len   = this.lavaStreamLen;
+    var angle = Math.atan2(p.y - vol.y, p.x - vol.x) + (Math.random() - 0.5) * 1.0;
+    this.lavaStreams.push({ angle: angle, len: len, born: now });
+
+    // Destroy walls along the stream path immediately
+    var steps = Math.ceil(len / (T * 0.4));
+    for (var si = 1; si <= steps; si++) {
+      var fd = si / steps * len;
+      var fx = vol.x + Math.cos(angle) * fd;
+      var fy = vol.y + Math.sin(angle) * fd;
+      var wr = Math.round((fy - GT) / T), wc = Math.round(fx / T);
+      if (wr >= 1 && wr < self.R-1 && wc >= 1 && wc < self.C-1 && self.map[wr][wc]) {
+        self.map[wr][wc] = 0; delete self.wallHp[wr+'_'+wc];
+        self.burst(fx, fy, '#cc4400', 5);
+        self.wallsBroken++;
       }
-    });
+    }
+    // Destroy boxes along stream
     self.boxes = self.boxes.filter(function(bx) {
-      if (Math.hypot(bx.x-b.x, bx.y-b.y) < 5) { self.burst(bx.x, bx.y,'#cc6600',8); return false; }
+      if (ptSegDist(bx.x, bx.y, vol.x, vol.y, vol.x+Math.cos(angle)*len, vol.y+Math.sin(angle)*len) < STREAM_W+4) {
+        self.burst(bx.x, bx.y, '#cc6600', 6); return false;
+      }
       return true;
     });
-    for (var wr=1; wr<self.R-1; wr++) for (var wc=1; wc<self.C-1; wc++) {
-      if (!self.map[wr][wc]) continue;
-      var wx=wc*T+T/2, wy=GT+wr*T+T/2;
-      if (Math.hypot(wx-b.x, wy-b.y) < 50) { self.map[wr][wc]=0; delete self.wallHp[wr+'_'+wc]; self.burst(wx,wy,'#cc4400',6); }
+    self.fl(vol.x, vol.y - 20, '🌋 LAVA STREAM!', '#ff4400');
+  }
+
+  // Continuous damage from all active streams
+  this.lavaStreams.forEach(function(s) {
+    var growFrac = Math.min(1, (now - s.born) / GROW_MS);
+    var curLen   = s.len * growFrac;
+    if (curLen < 8) return;
+    var ex = vol.x + Math.cos(s.angle) * curLen;
+    var ey = vol.y + Math.sin(s.angle) * curLen;
+
+    if (p.inv <= 0 && ptSegDist(p.x, p.y, vol.x, vol.y, ex, ey) < STREAM_W) {
+      var dmg = Math.round(p.mhp * 0.10);
+      p.hp = Math.max(0, p.hp - dmg); p.inv = 420;
+      self.burst(p.x, p.y, '#ff4400', 5); self.fl(p.x, p.y, '-'+dmg+'🔥', '#ff4400');
+      if (p.hp <= 0 && !self.dead) self.tryTeamTakeover();
     }
-    return false;
+
+    self.pets.forEach(function(pt) {
+      if (pt.dead || pt.x === undefined) return;
+      if (ptSegDist(pt.x, pt.y, vol.x, vol.y, ex, ey) < STREAM_W) {
+        var pdmg = Math.round((pt.mhp || 50) * 0.07);
+        if (pdmg > 0) {
+          pt.hp = Math.max(0, pt.hp - pdmg);
+          if (pt.hp <= 0) self.killPet(pt);
+        }
+      }
+    });
   });
 };
 
@@ -937,6 +1102,22 @@ Game.prototype.update = function(dt) {
       sndBuyPet();
     }
   });
+  // Portal teleport
+  var nowPortal = Date.now();
+  for (var pti = 0; pti < this.portals.length; pti++) {
+    var portal = this.portals[pti];
+    if (portal.linkTo < 0) continue;
+    if (nowPortal < (this.portalCool[pti] || 0)) continue;
+    if (Math.hypot(p.x - portal.x, p.y - portal.y) < 22) {
+      var dest = this.portals[portal.linkTo];
+      p.x = dest.x; p.y = dest.y;
+      this.portalCool[portal.linkTo] = nowPortal + 1500;
+      this.burst(dest.x, dest.y, portal.color, 14);
+      this.fl(dest.x, dest.y - 22, '🌀 portal!', portal.color);
+      break;
+    }
+  }
+
   p.at = Math.max(0, p.at - dt*1000);
   if (keys.Space && p.at <= 0) { p.atk = true; p.at = 380; this.aa = 280; this.doAtk(); }
   if (p.at <= 0) p.atk = false;
@@ -961,7 +1142,7 @@ Game.prototype.update = function(dt) {
         if (m.at <= 0) {
           m.at = 1800;
           var mAtk = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk * 0.5) : m.atk;
-          if (p.inv <= 0) { p.hp = Math.max(0, p.hp - mAtk); p.inv = 400; self.burst(p.x, p.y, '#ff3333', 8); self.fl(p.x, p.y, '-'+mAtk, '#ff4444'); if (p.hp <= 0 && !self.dead) { self.dead = true; self.showDead(); } }
+          if (p.inv <= 0) { p.hp = Math.max(0, p.hp - mAtk); p.inv = 400; self.burst(p.x, p.y, '#ff3333', 8); self.fl(p.x, p.y, '-'+mAtk, '#ff4444'); if (p.hp <= 0 && !self.dead) { self.tryTeamTakeover(); } }
         }
       }
       m.pat -= dt*1000;
@@ -1002,7 +1183,7 @@ Game.prototype.update = function(dt) {
           var mDmg = self.weakenUntil && nowMon < self.weakenUntil ? Math.round(m.atk * 0.5) : m.atk;
           p.hp = Math.max(0, p.hp - mDmg); p.inv = 350;
           self.burst(p.x, p.y, '#ff3333', 6); self.fl(p.x, p.y, '-' + mDmg, '#ff4444');
-          if (p.hp <= 0) { self.dead = true; self.showDead(); }
+          if (p.hp <= 0 && !self.dead) { self.tryTeamTakeover(); }
         }
       }
     }
@@ -1060,10 +1241,20 @@ Game.prototype.update = function(dt) {
   });
   this.mons = this.mons.filter(function(m) { return !m.dead || m.reviving; });
 
+  // Moving walls (level 25+)
+  if (this.lv >= 24 && !this.isBossRun) {
+    this.wallMoveTimer -= dt * 1000;
+    if (this.wallMoveTimer <= 0) { this.wallMoveTimer = 10000; this.moveWalls(); }
+  }
+
   var chestDone = !this.chest || this.chest.open || this.alreadyOwned;
   var monsAlive = this.mons.filter(function(m) { return !m.dead && !m.reviving; }).length;
   if (this.isBossRun) {
-    if (monsAlive === 0 && !this.trans) { this.trans = true; if (window.META_onBossWin) window.META_onBossWin(); }
+    if (monsAlive === 0 && !this.trans) {
+      this.trans = true;
+      if (this.voidPhase) { if (window.META_onVoidWin) window.META_onVoidWin(); }
+      else { if (window.META_onBossWin) window.META_onBossWin(); }
+    }
   } else if (monsAlive === 0 && chestDone && !this.trans) {
     this.trans = true;
     if (Math.random() < Math.min(0.80, 0.20 + 0.08 * this.upg.petluck)) this.awardFreePet(this.lv);
@@ -1124,6 +1315,58 @@ Game.prototype.doBlast = function() {
   }
 };
 
+Game.prototype.initTeam = function(config) {
+  var teamIds = config && config.team && config.team.length ? config.team : [config && config.character || 'brownbear'];
+  var allChars = (window.CHARACTERS || []).concat(window.CHEST_CHARS || []);
+  this.team = teamIds.map(function(id) {
+    for (var ci = 0; ci < allChars.length; ci++) if (allChars[ci].id === id) return allChars[ci];
+    return null;
+  }).filter(Boolean);
+  if (!this.team.length && allChars[0]) this.team = [allChars[0]];
+  this.teamIdx = 0;
+  var startHp = this.p.mhp;
+  this.teamHp           = this.team.map(function() { return startHp; });
+  this.teamBlastCharge  = this.team.map(function() { return 0; });
+  this.teamBlastReady   = this.team.map(function() { return false; });
+  this.teamDeadThisRun  = this.team.map(function() { return false; });
+  this.teamRunKills     = this.team.map(function() { return 0; });
+  this.charKillsData    = (config && config.charKills) || {};
+  this.charDef          = this.team[0] || null;
+  this.p.hp             = this.teamHp[0];
+};
+
+Game.prototype.switchChar = function(idx) {
+  if (idx < 0 || idx >= this.team.length || idx === this.teamIdx || this.teamDeadThisRun[idx]) return;
+  this.teamHp[this.teamIdx]          = this.p.hp;
+  this.teamBlastCharge[this.teamIdx] = this.blastCharge;
+  this.teamBlastReady[this.teamIdx]  = this.blastReady;
+  this.teamIdx    = idx;
+  this.charDef    = this.team[idx] || null;
+  this.p.hp       = this.teamHp[idx];
+  this.blastCharge= this.teamBlastCharge[idx];
+  this.blastReady = this.teamBlastReady[idx];
+  if (this.charDef) this.fl(this.p.x, this.p.y - 30, '🔄 ' + this.charDef.e + ' ' + this.charDef.n, '#a0d0ff');
+};
+
+Game.prototype.tryTeamTakeover = function() {
+  var prev = this.team[this.teamIdx];
+  this.teamDeadThisRun[this.teamIdx] = true;
+  this.teamHp[this.teamIdx] = 0;
+  var alive = [];
+  for (var i = 0; i < this.team.length; i++) { if (!this.teamDeadThisRun[i]) alive.push(i); }
+  if (alive.length === 0) { this.dead = true; this.showDead(); return; }
+  var next = alive[Math.floor(Math.random() * alive.length)];
+  this.teamIdx    = next;
+  this.charDef    = this.team[next] || null;
+  this.p.hp       = this.teamHp[next];
+  this.blastCharge= this.teamBlastCharge[next];
+  this.blastReady = this.teamBlastReady[next];
+  var prevName = prev ? prev.e + ' ' + prev.n : 'Character';
+  var nextName = this.charDef ? this.charDef.e + ' ' + this.charDef.n : 'Teammate';
+  this.fl(this.p.x, this.p.y - 28, '💀 ' + prevName + ' fell!', '#ff4444');
+  this.fl(this.p.x, this.p.y - 50, nextName + ' takes over!', '#ffaa00');
+};
+
 Game.prototype.doAtk = function() {
   if (this.blastReady) { this.doBlast(); return; }
   var p     = this.p;
@@ -1145,10 +1388,14 @@ Game.prototype.doAtk = function() {
     this.fx.push({x1:p.x, y1:p.y, x2:this.chest.x, y2:this.chest.y, l:180, c:'#ff8800'});
   }
   if (hitCount > 0 && this.charDef) {
-    this.blastCharge += hitCount;
-    if (this.blastCharge >= 100) {
-      this.blastReady = true; this.blastCharge = 100;
-      this.fl(p.x, p.y - 30, '💥 BLAST READY! (press SPACE)', '#ffff00');
+    var _cid = this.charDef.id;
+    var _totalKills = (this.charKillsData[_cid] || 0) + (this.teamRunKills[this.teamIdx] || 0);
+    if (_totalKills >= 100) {
+      this.blastCharge += hitCount;
+      if (this.blastCharge >= 100) {
+        this.blastReady = true; this.blastCharge = 100;
+        this.fl(p.x, p.y - 30, '💥 BLAST READY! (press SPACE)', '#ffff00');
+      }
     }
   }
   // Destroy boxes in range
@@ -1197,6 +1444,7 @@ Game.prototype.kill  = function(m) {
     }
   }
   m.dead = true; this.monstersKilled++;
+  if (this.team.length > 0) this.teamRunKills[this.teamIdx] = (this.teamRunKills[this.teamIdx] || 0) + 1;
   this.gems += m.gem; this.score += m.gem*10;
   this.burst(m.x, m.y, '#ffd700', 10); this.fl(m.x, m.y, '+' + m.gem + '💎', '#ffd700'); sndKill();
   var _p = this.p;
@@ -1292,6 +1540,33 @@ Game.prototype.hud = function() {
     if (this.blastReady) { blastEl.textContent = '💥 READY!'; blastEl.style.color = '#ffff00'; }
     else if (this.charDef) { blastEl.textContent = (this.blastCharge || 0) + '/100'; blastEl.style.color = '#80c0ff'; }
     else { blastEl.textContent = '—'; blastEl.style.color = '#504060'; }
+  }
+
+  var teambarEl = document.getElementById('teambar');
+  if (teambarEl && this.team.length > 0) {
+    var self = this;
+    teambarEl.innerHTML = this.team.map(function(c, i) {
+      if (!c) return '';
+      var isActive = i === self.teamIdx;
+      var isDead   = self.teamDeadThisRun[i];
+      var hp       = isActive ? self.p.hp : self.teamHp[i];
+      var hpPct2   = Math.max(0, hp / self.p.mhp);
+      var cid      = c.id;
+      var totalK   = (self.charKillsData[cid] || 0) + (self.teamRunKills[i] || 0);
+      var blastOk  = totalK >= 100;
+      var bCh      = isActive ? self.blastCharge : self.teamBlastCharge[i];
+      var bRdy     = isActive ? self.blastReady  : self.teamBlastReady[i];
+      var cls      = 'team-portrait' + (isActive ? ' team-active' : '') + (isDead ? ' team-dead' : '');
+      var click    = (!isDead && !isActive) ? ' onclick="G&&G.switchChar(' + i + ')"' : '';
+      var blastTxt = blastOk ? (bRdy ? '💥' : bCh + '/100') : (totalK + '/100💀');
+      var blastCls = 'tp-blast' + (blastOk ? '' : ' tp-locked');
+      return '<div class="' + cls + '"' + click + ' title="' + c.n + (isDead ? ' — DEAD' : '') + '">' +
+        '<div class="tp-emoji">' + c.e + '</div>' +
+        '<div class="tp-name">' + c.n + '</div>' +
+        '<div class="tp-hp"><div class="tp-hpfill" style="width:' + Math.round(hpPct2*100) + '%"></div></div>' +
+        '<div class="' + blastCls + '">' + blastTxt + '</div>' +
+        '</div>';
+    }).join('');
   }
 
   var petCounts = {}, petOrder = [];
@@ -1393,16 +1668,32 @@ Game.prototype.draw = function() {
     ctx.stroke();
   });
 
-  // Draw volcano
-  if (this.volcano) {
-    var vol = this.volcano;
-    ctx.font = '36px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🌋', vol.x, vol.y);
-    var pulse2 = 0.3 + 0.3 * Math.sin(Date.now() / 300);
-    ctx.globalAlpha = pulse2;
-    ctx.strokeStyle = '#ff4400'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(vol.x, vol.y, 24, 0, Math.PI*2); ctx.stroke();
+  // Draw portals
+  var nowDraw = Date.now();
+  this.portals.forEach(function(portal, idx) {
+    var pulse = 0.5 + 0.5 * Math.sin(nowDraw / 260 + idx * 1.8);
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.25 * pulse;
+    ctx.fillStyle = portal.color;
+    ctx.beginPath(); ctx.arc(portal.x, portal.y, 14 + pulse * 5, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.8 + 0.2 * pulse;
+    ctx.strokeStyle = portal.color; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(portal.x, portal.y, 18 + pulse * 4, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
+    ctx.font = '18px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🌀', portal.x, portal.y);
+    ctx.restore();
+  });
+
+  // Wall-shift warning (level 25+)
+  if (this.lv >= 24 && !this.isBossRun && this.wallMoveTimer < 2500) {
+    var wfrac = 1 - this.wallMoveTimer / 2500;
+    ctx.save();
+    ctx.globalAlpha = 0.25 + 0.65 * wfrac;
+    ctx.fillStyle = '#ccccff';
+    ctx.font = 'bold 13px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('⚡ WALLS SHIFTING!', canvas.width / 2, GT + 38);
+    ctx.restore();
   }
 
   // Draw volcano
@@ -1416,22 +1707,32 @@ Game.prototype.draw = function() {
     ctx.beginPath(); ctx.arc(vol.x, vol.y, 24, 0, Math.PI*2); ctx.stroke();
     ctx.globalAlpha = 1;
   }
-  // Draw lava blast warnings
-  var now_draw = Date.now();
-  this.lavaBlasts.forEach(function(b) {
-    if (b.done) return;
-    var frac = Math.max(0, Math.min(1, 1-(b.warnUntil-now_draw)/1600));
-    var wrad = 10 + frac*26;
-    ctx.globalAlpha = 0.25 + frac*0.45;
-    ctx.fillStyle = '#ff2200'; ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 0.7 + frac*0.3;
-    ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(b.x, b.y, wrad, 0, Math.PI*2); ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(255,80,0,0.8)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(b.x-14,b.y); ctx.lineTo(b.x+14,b.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(b.x,b.y-14); ctx.lineTo(b.x,b.y+14); ctx.stroke();
-  });
+  // Draw lava streams (persistent)
+  if (this.lavaStreams.length && this.volcano) {
+    var nowDraw2 = Date.now(), vol2d = this.volcano;
+    ctx.save(); ctx.lineCap = 'round';
+    this.lavaStreams.forEach(function(s) {
+      var growFrac = Math.min(1, (nowDraw2 - s.born) / 900);
+      var drawLen  = s.len * growFrac;
+      if (drawLen < 2) return;
+      var ex = vol2d.x + Math.cos(s.angle) * drawLen;
+      var ey = vol2d.y + Math.sin(s.angle) * drawLen;
+      var pulse = 0.7 + 0.3 * Math.sin(nowDraw2 / 180 + s.angle * 3);
+      // Outer glow
+      ctx.globalAlpha = 0.28 * pulse;
+      ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 26;
+      ctx.beginPath(); ctx.moveTo(vol2d.x, vol2d.y); ctx.lineTo(ex, ey); ctx.stroke();
+      // Main stream
+      ctx.globalAlpha = 0.75 * pulse;
+      ctx.strokeStyle = '#ff2200'; ctx.lineWidth = 13;
+      ctx.beginPath(); ctx.moveTo(vol2d.x, vol2d.y); ctx.lineTo(ex, ey); ctx.stroke();
+      // Hot centre
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(vol2d.x, vol2d.y); ctx.lineTo(ex, ey); ctx.stroke();
+    });
+    ctx.globalAlpha = 1; ctx.lineCap = 'butt'; ctx.restore();
+  }
 
   // Draw gem chests
   this.gemChests.forEach(function(gc) {
@@ -1845,9 +2146,14 @@ function metaReturn(won) {
   document.getElementById('gov').style.display = 'none';
   document.getElementById('wov').style.display = 'none';
   if (!G) { if (window.showHub) window.showHub(); return; }
-  if (G.isBossRun) { if (window.showHub) window.showHub(); return; }
+  if (G.isBossRun) {
+    if (G.voidPhase && !won && window.META_onVoidFail) { window.META_onVoidFail(); return; }
+    if (window.showHub) window.showHub(); return;
+  }
   if (window.META_onRunEnd) {
-    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0, { monstersKilled: G.monstersKilled||0, wallsBroken: G.wallsBroken||0, volcanoGems: G.volcanoGems||0, digRubies: G.digRubies||0 });
+    var _ck = {};
+    G.team.forEach(function(c, i) { if (c) _ck[c.id] = (G.charKillsData[c.id] || 0) + (G.teamRunKills[i] || 0); });
+    window.META_onRunEnd(won, G.pets ? G.pets.slice() : [], G.lv + 1, G.homePetUIDs || {}, G.score || 0, G.gems || 0, { monstersKilled: G.monstersKilled||0, wallsBroken: G.wallsBroken||0, volcanoGems: G.volcanoGems||0, digRubies: G.digRubies||0, charKills: _ck });
   } else {
     restart();
   }
@@ -1894,22 +2200,21 @@ window.META_startGame = function (config, homePets) {
     if (config.petluck)      G.upg.petluck += config.petluck * 2;
     for (var i = 0; i < (config.potion || 0); i++) { G.p.mhp += 30; G.p.hp = Math.min(G.p.hp + 30, G.p.mhp); }
     if (config.weaponDmg)   { G.weaponDmg = config.weaponDmg; G.weaponRange = config.weaponRange; G.weaponLevel = config.weaponLevel || 1; G.weaponColor = config.weaponColor || '#fff'; }
-    if (config.character) {
-      var chars = (window.CHARACTERS || []).concat(window.CHEST_CHARS || []);
-      for (var ci = 0; ci < chars.length; ci++) { if (chars[ci].id === config.character) { G.charDef = chars[ci]; break; } }
-    }
   }
+  G.initTeam(config);
   applyHomePets(homePets);
 };
 
-window.META_startBossGame = function(homePets, charDef, bossKills) {
+window.META_startBossGame = function(homePets, charDef, bossKills, voidKills) {
   G = new Game();
   resetGameUI();
   if (window.playScreenMusic) window.playScreenMusic('game-boss');
   G.isBossRun = true;
-  G.charDef = charDef || null;
+  G.charDef   = charDef || null;
   G.bossKills = bossKills || 0;
+  G.voidKills = voidKills || 0;
   G.buildBossLevel();
+  G.initTeam({ team: charDef ? [charDef.id] : [], charKills: {} });
   applyHomePets(homePets);
 };
 

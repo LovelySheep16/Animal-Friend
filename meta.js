@@ -564,14 +564,18 @@
     if (!acc.unlockedAwards)    acc.unlockedAwards    = [];
     if (!acc.characters)        acc.characters        = ['brownbear'];
     if (!acc.activeCharacter)   acc.activeCharacter   = 'brownbear';
+    if (!acc.teamChars)         acc.teamChars         = [acc.activeCharacter || 'brownbear'];
+    if (!acc.charKills)         acc.charKills         = {};
     if (!acc.lastBossRun)       acc.lastBossRun       = 0;
     if (!acc.bossKills)         acc.bossKills         = 0;
+    if (!acc.voidKills)         acc.voidKills         = 0;
     if (!acc.emeralds)          acc.emeralds          = 0;
     if (!acc.chestWeapons)      acc.chestWeapons      = {};
     if (!acc.chestChars)        acc.chestChars        = [];
     if (!acc.chestPets)         acc.chestPets         = {};
     if (!acc.backpack)          acc.backpack          = {};
     if (!acc.subExpiry)         acc.subExpiry         = 0;
+    if (!acc.habitatBonuses)    acc.habitatBonuses    = [];
     if (!acc.stats) acc.stats = {
       runsPlayed:0, runsWon:0, bestScore:0, bestGems:0, bestRunRubies:0,
       totalScore:0, totalGems:0, totalPetsHome:0, monstersKilled:0,
@@ -583,6 +587,37 @@
 
 function speciesCount(acc, petId) {
     return acc.homePets.filter(function(p) { return p.id === petId; }).length;
+  }
+
+  function checkHabitatBonuses(acc) {
+    if (!acc.habitatBonuses) acc.habitatBonuses = [];
+    var ownedIds = {};
+    (acc.homePets || []).forEach(function(p) { ownedIds[p.id] = true; });
+    var newlyCompleted = [];
+    for (var hi = 0; hi < HABITATS.length - 1; hi++) {
+      var h = HABITATS[hi];
+      if (!h.ids.length) continue;
+      if (acc.habitatBonuses.indexOf(h.label) >= 0) continue;
+      if (h.ids.every(function(id) { return ownedIds[id]; })) {
+        acc.habitatBonuses.push(h.label);
+        newlyCompleted.push(h);
+      }
+    }
+    return newlyCompleted;
+  }
+
+  function updateHabitatBonusExport() {
+    var acc = getAccount();
+    var bonusIds = {};
+    ((acc && acc.habitatBonuses) || []).forEach(function(label) {
+      for (var hi = 0; hi < HABITATS.length; hi++) {
+        if (HABITATS[hi].label === label) {
+          HABITATS[hi].ids.forEach(function(id) { bonusIds[id] = true; });
+          break;
+        }
+      }
+    });
+    window.META_habitatBonusIds = bonusIds;
   }
 
   function petStrength(p) {
@@ -630,7 +665,7 @@ function speciesCount(acc, petId) {
   }
 
   // ── Screen management ─────────────────────────────────────────────────────
-  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop','screen-subscription'];
+  var SCREENS = ['screen-hub','screen-meta-shop','screen-result','screen-weapons','screen-servants','screen-dragons','screen-awards','screen-habitats','screen-characters','screen-exchange','screen-chests','screen-food-shop','screen-subscription','screen-account','screen-leaderboard','screen-friends','screen-trade'];
 
   function showScreen(id) {
     SCREENS.forEach(function(s) { var el = document.getElementById(s); if (el) el.style.display = 'none'; });
@@ -728,7 +763,8 @@ function speciesCount(acc, petId) {
       html += '<span class="hab-card-icon">' + th.icon + '</span>';
       html += '<div><div class="hab-card-title" style="color:' + th.border + '">' + th.name + '</div>';
       html += '<div class="hab-card-desc">' + th.desc + '</div></div>';
-      html += '<div class="hab-card-count" style="color:' + th.border + '">' + ownedCount + '<span style="color:#605080">/' + h.ids.length + '</span></div>';
+      var habDone = acc.habitatBonuses && acc.habitatBonuses.indexOf(h.label) >= 0;
+      html += '<div class="hab-card-count" style="color:' + th.border + '">' + ownedCount + '<span style="color:#605080">/' + h.ids.length + '</span>' + (habDone ? ' <span style="color:#44ff88;font-size:11px">✅ +20⚔️</span>' : '') + '</div>';
       html += '</div>';
       html += '<div class="hab-card-pets">';
       h.ids.forEach(function(id) {
@@ -781,29 +817,55 @@ function speciesCount(acc, petId) {
   window.showCharacters = function() {
     var acc = ensureItems(getAccount());
     document.getElementById('char-rubies').textContent = acc.rubies + ' 🔴';
-    var chars = window.CHARACTERS || [];
-    var owned = acc.characters || ['brownbear'];
-    var active = acc.activeCharacter || 'brownbear';
+    var chars      = window.CHARACTERS || [];
+    var owned      = acc.characters || ['brownbear'];
+    var team       = acc.teamChars && acc.teamChars.length ? acc.teamChars : [acc.activeCharacter || 'brownbear'];
+    var charKills  = acc.charKills || {};
+    var allCharsMap = {};
+    (window.CHARACTERS || []).concat(window.CHEST_CHARS || []).forEach(function(c) { allCharsMap[c.id] = c; });
+
+    // Team slots header
+    var teamHtml = '<div class="weapon-cat-title" style="color:#ffd700">⚔️ Your Team (' + team.length + '/3)</div>';
+    teamHtml += '<div style="display:flex;gap:8px;padding:6px 0 10px;">';
+    for (var ts = 0; ts < 3; ts++) {
+      var tid = team[ts];
+      var tc  = tid ? allCharsMap[tid] : null;
+      if (tc) {
+        var tkills = charKills[tc.id] || 0;
+        var blastUnlocked = tkills >= 100;
+        teamHtml += '<div style="flex:1;text-align:center;padding:6px;background:rgba(255,215,0,0.08);border:1px solid #ffd700;border-radius:6px;font-size:11px;">';
+        teamHtml += '<div style="font-size:22px">' + tc.e + '</div>';
+        teamHtml += '<div style="color:#fff;font-weight:bold">' + tc.n + '</div>';
+        teamHtml += '<div style="color:' + (blastUnlocked ? '#ffff00' : '#a0a0a0') + '">' + (blastUnlocked ? '💥 Blast OK' : tkills + '/100 kills') + '</div>';
+        teamHtml += '</div>';
+      } else {
+        teamHtml += '<div style="flex:1;text-align:center;padding:6px;background:rgba(80,80,80,0.12);border:1px dashed #604080;border-radius:6px;color:#604080;font-size:11px;display:flex;align-items:center;justify-content:center">Empty slot</div>';
+      }
+    }
+    teamHtml += '</div>';
+
+    var html = teamHtml;
     var cats = {}, catOrder = [];
     chars.forEach(function(c) {
       if (!cats[c.cat]) { cats[c.cat] = []; catOrder.push(c.cat); }
       cats[c.cat].push(c);
     });
-    var html = '';
     catOrder.forEach(function(cat) {
       html += '<div class="weapon-cat-title">' + cat + '</div><div class="weapon-cat-grid">';
       cats[cat].forEach(function(c) {
         var isOwned  = owned.indexOf(c.id) >= 0;
-        var isActive = active === c.id;
+        var inTeam   = team.indexOf(c.id) >= 0;
         var ccost    = subCost(c.cost);
         var canBuy   = acc.rubies >= ccost && !isOwned;
         var safeId   = c.id.replace(/'/g, "\\'");
-        html += '<div class="weapon-item char-item' + (isActive ? ' weapon-active' : '') + '">';
+        var kills    = charKills[c.id] || 0;
+        var blastOk  = kills >= 100;
+        html += '<div class="weapon-item char-item' + (inTeam ? ' weapon-active' : '') + '">';
         html += '<div class="weapon-emoji">' + c.e + '</div>';
         html += '<div class="weapon-name">' + c.n + '</div>';
         html += '<div class="weapon-stats">+' + c.atkBonus + ' atk &nbsp; ' + BLAST_LABELS[c.blast] + '</div>';
         if (isOwned) {
-          html += '<div class="weapon-level" style="color:#a0d0ff">Owned</div>';
+          html += '<div class="weapon-level" style="color:' + (blastOk ? '#ffff00' : '#a0d0ff') + '">' + (blastOk ? '💥 Blast ready' : kills + '/100 kills') + '</div>';
         }
         html += '<div class="weapon-btns">';
         if (!isOwned) {
@@ -811,8 +873,8 @@ function speciesCount(acc, petId) {
             (canBuy ? ' onclick="buyCharacter(\'' + safeId + '\')"' : ' disabled') + '>' +
             (ccost === 0 ? 'Free' : 'Buy ' + ccost + '🔴') + '</button>';
         } else {
-          html += '<button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipCharacter(\'' + safeId + '\')">' +
-            (isActive ? '✓ Playing' : 'Play') + '</button>';
+          html += '<button class="weapon-btn weapon-equip' + (inTeam ? ' weapon-equipped' : '') + '" onclick="toggleTeamChar(\'' + safeId + '\')">' +
+            (inTeam ? '✓ In Team' : 'Add to Team') + '</button>';
         }
         html += '</div></div>';
       });
@@ -825,14 +887,16 @@ function speciesCount(acc, petId) {
       html += '<div class="weapon-cat-title" style="color:#00eeaa">📦 Chest Characters</div><div class="weapon-cat-grid">';
       chestChars.forEach(function(c) {
         if (ownedChest.indexOf(c.id) < 0) return;
-        var isActive = active === c.id;
+        var inTeam = team.indexOf(c.id) >= 0;
+        var kills  = charKills[c.id] || 0;
+        var blastOk = kills >= 100;
         var sid = c.id.replace(/'/g, "\\'");
-        html += '<div class="weapon-item char-item' + (isActive ? ' weapon-active' : '') + '">';
+        html += '<div class="weapon-item char-item' + (inTeam ? ' weapon-active' : '') + '">';
         html += '<div class="weapon-emoji">' + c.e + '</div>';
         html += '<div class="weapon-name">' + c.n + '</div>';
         html += '<div class="weapon-stats">+' + c.atkBonus + ' atk &nbsp; ' + BLAST_LABELS[c.blast] + '</div>';
-        html += '<div class="weapon-level" style="color:#00eeaa">📦 Chest</div>';
-        html += '<div class="weapon-btns"><button class="weapon-btn weapon-equip' + (isActive ? ' weapon-equipped' : '') + '" onclick="equipCharacter(\'' + sid + '\')">' + (isActive ? '✓ Playing' : 'Play') + '</button></div>';
+        html += '<div class="weapon-level" style="color:#00eeaa">📦 ' + (blastOk ? '💥 Blast ready' : kills + '/100 kills') + '</div>';
+        html += '<div class="weapon-btns"><button class="weapon-btn weapon-equip' + (inTeam ? ' weapon-equipped' : '') + '" onclick="toggleTeamChar(\'' + sid + '\')">' + (inTeam ? '✓ In Team' : 'Add to Team') + '</button></div>';
         html += '</div>';
       });
       html += '</div>';
@@ -863,6 +927,26 @@ function speciesCount(acc, petId) {
     var inChest  = (acc.chestChars  || []).indexOf(id) >= 0;
     if (!inNormal && !inChest) return;
     acc.activeCharacter = id;
+    saveAccount(acc);
+    window.showCharacters();
+  };
+
+  window.toggleTeamChar = function(id) {
+    var acc = ensureItems(getAccount());
+    var inNormal = (acc.characters || []).indexOf(id) >= 0;
+    var inChest  = (acc.chestChars  || []).indexOf(id) >= 0;
+    if (!inNormal && !inChest) return;
+    var team = acc.teamChars ? acc.teamChars.slice() : [acc.activeCharacter || 'brownbear'];
+    var idx  = team.indexOf(id);
+    if (idx >= 0) {
+      if (team.length <= 1) return;
+      team.splice(idx, 1);
+    } else {
+      if (team.length >= 3) { showNotifBox('<div class="notif-title">Team Full!</div><div class="notif-body">Remove a character from your team first (max 3).</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
+      team.push(id);
+    }
+    acc.teamChars      = team;
+    acc.activeCharacter = team[0];
     saveAccount(acc);
     window.showCharacters();
   };
@@ -928,30 +1012,25 @@ function speciesCount(acc, petId) {
     if (roll < 0.33) {
       var pool = ch.weapons;
       var avail = pool.filter(function(wid) { return !acc.chestWeapons[wid]; });
-      if (avail.length === 0) { acc.rubies += 150; won = {e:'🔴', n:'Duplicate! +150 🔴 compensation'}; }
-      else {
-        var wid = avail[Math.floor(Math.random() * avail.length)];
-        acc.chestWeapons[wid] = 1;
-        var wd = null; for (var i2=0; i2<CHEST_WEAPONS.length; i2++) if (CHEST_WEAPONS[i2].id===wid) { wd=CHEST_WEAPONS[i2]; break; }
-        won = {e: wd ? wd.e : '⚔️', n: (wd ? wd.n : wid) + ' (Chest Weapon)'};
-      }
+      var pickPool = avail.length > 0 ? avail : pool;
+      var wid = pickPool[Math.floor(Math.random() * pickPool.length)];
+      acc.chestWeapons[wid] = 1;
+      var wd = null; for (var i2=0; i2<CHEST_WEAPONS.length; i2++) if (CHEST_WEAPONS[i2].id===wid) { wd=CHEST_WEAPONS[i2]; break; }
+      won = {e: wd ? wd.e : '⚔️', n: (wd ? wd.n : wid) + ' (Chest Weapon)'};
     } else if (roll < 0.66) {
       var cpool = ch.chars;
       var cavail = cpool.filter(function(cid) { return acc.chestChars.indexOf(cid) < 0; });
-      if (cavail.length === 0) { acc.rubies += 150; won = {e:'🔴', n:'Duplicate! +150 🔴 compensation'}; }
-      else {
-        var cid = cavail[Math.floor(Math.random() * cavail.length)];
-        acc.chestChars.push(cid);
-        var cd = null; for (var i3=0; i3<CHEST_CHARS.length; i3++) if (CHEST_CHARS[i3].id===cid) { cd=CHEST_CHARS[i3]; break; }
-        won = {e: cd ? cd.e : '🧙', n: (cd ? cd.n : cid) + ' (Chest Character)'};
-      }
+      var cpickPool = cavail.length > 0 ? cavail : cpool;
+      var cid = cpickPool[Math.floor(Math.random() * cpickPool.length)];
+      if (acc.chestChars.indexOf(cid) < 0) acc.chestChars.push(cid);
+      var cd = null; for (var i3=0; i3<CHEST_CHARS.length; i3++) if (CHEST_CHARS[i3].id===cid) { cd=CHEST_CHARS[i3]; break; }
+      won = {e: cd ? cd.e : '🧙', n: (cd ? cd.n : cid) + ' (Chest Character)'};
     } else {
       var ppool = ch.pets;
       var pavail = ppool.filter(function(pid) { return !acc.chestPets[pid]; });
-      if (pavail.length === 0) { acc.rubies += 150; won = {e:'🔴', n:'Duplicate! +150 🔴 compensation'}; }
-      else {
-        var pid = pavail[Math.floor(Math.random() * pavail.length)];
-        acc.chestPets[pid] = true;
+      var ppickPool = pavail.length > 0 ? pavail : ppool;
+      var pid = ppickPool[Math.floor(Math.random() * ppickPool.length)];
+      acc.chestPets[pid] = true;
         var pd = null; for (var i4=0; i4<CHEST_PETS.length; i4++) if (CHEST_PETS[i4].id===pid) { pd=CHEST_PETS[i4]; break; }
         if (pd) {
           var inst = {}; for (var k in pd) inst[k] = pd[k];
@@ -961,12 +1040,15 @@ function speciesCount(acc, petId) {
           acc.homePets.push(inst);
         }
         won = {e: pd ? pd.e : '🐾', n: (pd ? pd.n : pid) + ' (Chest Pet — added to Home Pets!)'};
-      }
     }
     checkAwards(acc);
     saveAccount(acc);
-    alert('📦 ' + ch.n + ' opened!\n\n' + won.e + ' ' + won.n);
-    window.showChests();
+    showNotifBox(
+      '<div class="notif-title">📦 ' + ch.n + ' opened!</div>' +
+      '<div class="notif-body" style="font-size:28px;margin:8px 0">' + won.e + '</div>' +
+      '<div class="notif-body">' + won.n + '</div>' +
+      '<button class="btn btng" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';window.showChests();})()">✓ Nice!</button>'
+    );
   };
 
   // ── Boss Run ──────────────────────────────────────────────
@@ -975,17 +1057,17 @@ function speciesCount(acc, petId) {
     var NINETY_DAYS = 90 * 24 * 60 * 60 * 1000;
     var remaining = NINETY_DAYS - (Date.now() - (acc.lastBossRun || 0));
     if (remaining > 0) {
-      alert('⏳ Boss cooldown: ' + dragonTimeLeft(remaining) + ' remaining.\nYou can only challenge the Cosmic Terror once every 90 days!');
+      showNotifBox('<div class="notif-title">⏳ Boss Cooldown</div><div class="notif-body">' + dragonTimeLeft(remaining) + ' remaining.<br>You can only challenge the Cosmic Terror once every 90 days!</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>');
       return;
     }
     acc.lastBossRun = Date.now();
     saveAccount(acc);
     showScreen('game');
     var charDef = null;
-    var cid = acc.activeCharacter || 'brownbear';
+    var cid = (acc.teamChars && acc.teamChars[0]) || acc.activeCharacter || 'brownbear';
     var allChars = (window.CHARACTERS || []).concat(window.CHEST_CHARS || []);
     for (var i = 0; i < allChars.length; i++) { if (allChars[i].id === cid) { charDef = allChars[i]; break; } }
-    if (window.META_startBossGame) window.META_startBossGame(acc.homePets || [], charDef, acc.bossKills || 0);
+    if (window.META_startBossGame) window.META_startBossGame(acc.homePets || [], charDef, acc.bossKills || 0, acc.voidKills || 0);
   };
 
   window.META_onBossWin = function() {
@@ -996,11 +1078,35 @@ function speciesCount(acc, petId) {
     acc.bossKills = (acc.bossKills || 0) + 1;
     checkAwards(acc);
     saveAccount(acc);
-    var nextScale = Math.pow(2, acc.bossKills);
+    // Spawn the Void phase immediately
+    if (window.G && window.G.buildVoidPhase) {
+      window.G.buildVoidPhase();
+    }
+  };
+
+  window.META_onVoidWin = function() {
+    var acc = ensureItems(getAccount());
+    acc.voidKills = (acc.voidKills || 0) + 1;
+    checkAwards(acc);
+    saveAccount(acc);
+    var nextScale = Math.pow(2, acc.voidKills);
     var wov = document.getElementById('wov');
-    wov.querySelector('.otitle').textContent = '🌠 BOSS DEFEATED!';
-    document.getElementById('wscore').textContent = '+10,000 🔴  ·  Next: ' + nextScale + 'x stronger!';
+    wov.querySelector('.otitle').textContent = '☠️ THE VOID CONQUERED!';
+    document.getElementById('wscore').textContent = '+10,000🔴 total  ·  Next Void: ' + nextScale + '× stronger!';
     wov.style.display = 'flex';
+  };
+
+  window.META_onVoidFail = function() {
+    var acc = ensureItems(getAccount());
+    acc.lastBossRun = Date.now();
+    saveAccount(acc);
+    var gov = document.getElementById('gov');
+    if (gov) {
+      var ot = gov.querySelector('.otitle'); if (ot) ot.textContent = '☠️ THE VOID CONSUMED YOU!';
+      var gl = document.getElementById('glvl'); if (gl) gl.textContent = '🌠 Void';
+      var gg = document.getElementById('ggems'); if (gg) gg.textContent = '0 (no rubies earned)';
+      gov.style.display = 'flex';
+    }
   };
 
   // ── Hub ───────────────────────────────────────────────────────────────────
@@ -1010,6 +1116,7 @@ function speciesCount(acc, petId) {
     document.getElementById('hub-rubies').textContent = acc.rubies + ' 🔴';
     document.getElementById('hub-best').textContent   = 'Best: Level ' + acc.highestLevel;
     renderHomePets(acc.homePets);
+    updateHubAccount();
     showScreen('screen-hub');
   }
   window.showHub = showHub;
@@ -1144,7 +1251,9 @@ function speciesCount(acc, petId) {
     acc.stats.boostsUsed += boostsCount;
     var config = Object.assign({ speed: acc.shopItems.speed||0, attack: acc.shopItems.attack||0,
                    petluck: acc.shopItems.petluck||0, potion: acc.shopItems.potion||0,
-                   character: acc.activeCharacter || 'brownbear' }, wc);
+                   character: (acc.teamChars && acc.teamChars[0]) || acc.activeCharacter || 'brownbear',
+                   team: acc.teamChars && acc.teamChars.length ? acc.teamChars : [acc.activeCharacter || 'brownbear'],
+                   charKills: acc.charKills || {} }, wc);
     acc.shopItems = { speed:0, attack:0, petluck:0, potion:0 };
     saveAccount(acc);
     showScreen('game');
@@ -1176,6 +1285,12 @@ function speciesCount(acc, petId) {
       acc.stats.monstersKilled += runStats.monstersKilled||0;
       acc.stats.wallsBroken += runStats.wallsBroken||0;
       acc.stats.volcanoGems += runStats.volcanoGems||0;
+      if (runStats.charKills) {
+        if (!acc.charKills) acc.charKills = {};
+        Object.keys(runStats.charKills).forEach(function(cid) {
+          acc.charKills[cid] = runStats.charKills[cid];
+        });
+      }
     }
     // Dragon egg: 1 roll per 5-level milestone passed, 20% each
     var eggRolls = Math.floor(level / 5), eggsGot = 0;
@@ -1199,8 +1314,10 @@ function speciesCount(acc, petId) {
     });
     acc.stats.totalPetsHome += petsGoingHome.length;
     if (acc.rubies > acc.stats.maxRubies) acc.stats.maxRubies = acc.rubies;
+    var newlyCompleted = checkHabitatBonuses(acc);
     var newAwards = checkAwards(acc);
     saveAccount(acc);
+    updateHabitatBonusExport();
     var titleEl = document.getElementById('result-title');
     titleEl.textContent = '💀 You Died';
     titleEl.style.color = '#ff5050';
@@ -1208,7 +1325,8 @@ function speciesCount(acc, petId) {
     document.getElementById('result-rubies').textContent =
       '+' + totalRubies + ' 🔴  (score: ' + perfBonus + '  ·  gems: ' + gemRubies + (digRubies ? '  ·  ⛏️ dig: ' + digRubies : '') + ')' +
       (eggsGot ? '  ·  🥚 ×' + eggsGot + ' dragon egg' + (eggsGot > 1 ? 's' : '') + '!' : '') +
-      (newAwards.length ? '  ·  🏅 ' + newAwards.length + ' award' + (newAwards.length>1?'s':'') + '!' : '');
+      (newAwards.length ? '  ·  🏅 ' + newAwards.length + ' award' + (newAwards.length>1?'s':'') + '!' : '') +
+      (newlyCompleted.length ? '  🎉 ' + newlyCompleted.map(function(h){return h.label+' COMPLETE! +20⚔️ forever!';}).join('  ') : '');
     var petsEl = document.getElementById('result-pets');
     var homePetCount = Object.keys(homePetUIDs || {}).length;
     if (petsGoingHome.length > 0) {
@@ -1466,8 +1584,9 @@ function speciesCount(acc, petId) {
     return null;
   };
 
-  window.showFoodShop = function() {
+  window.showFoodShop = function(keepBonus) {
     var acc = ensureItems(getAccount());
+    if (!keepBonus) { var b = document.getElementById('food-shop-bonus'); if (b) b.style.display = 'none'; }
     document.getElementById('food-shop-rubies').textContent = acc.rubies + ' 🔴';
     var grid = document.getElementById('food-shop-grid');
     var items = window.FOOD_ITEMS || [];
@@ -1506,8 +1625,22 @@ function speciesCount(acc, petId) {
     acc.rubies -= cost;
     acc.stats.rubiesSpent = (acc.stats.rubiesSpent || 0) + cost;
     acc.backpack[id] = (acc.backpack[id] || 0) + 1;
+    var bonus = null;
+    if (Math.random() < 0.1) {
+      bonus = items[Math.floor(Math.random() * items.length)];
+      acc.backpack[bonus.id] = (acc.backpack[bonus.id] || 0) + 1;
+    }
     saveAccount(acc);
-    window.showFoodShop();
+    window.showFoodShop(true);
+    var bonusEl = document.getElementById('food-shop-bonus');
+    if (bonusEl) {
+      if (bonus) {
+        bonusEl.textContent = '🎁 Lucky! Free bonus: ' + bonus.e + ' ' + bonus.n + '!';
+        bonusEl.style.display = 'block';
+      } else {
+        bonusEl.style.display = 'none';
+      }
+    }
   };
 
   // ── Subscription ──────────────────────────────────────────────────────────
@@ -1519,7 +1652,7 @@ function speciesCount(acc, petId) {
       ? '<div class="sub-active">👑 Active — ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + ' remaining</div>'
       : '<div class="sub-inactive">Not subscribed</div>';
     document.getElementById('sub-status').innerHTML = statusHtml;
-    document.getElementById('sub-btn').textContent = sub ? '👑 Renew (+30 days)' : '👑 Subscribe — €5/month';
+    document.getElementById('sub-btn').textContent = sub ? '👑 Renew (+30 days)' : '👑 Subscribe — €2/month';
     showScreen('screen-subscription');
   };
 
@@ -1531,12 +1664,462 @@ function speciesCount(acc, petId) {
     window.showSubscription();
   };
 
+  // ── Social / Account ──────────────────────────────────────────────────────
+  var SESSION_KEY = 'af_session';
+
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { return null; }
+  }
+  function setSession(name, token) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({name: name, token: token}));
+  }
+  function clearSession() { localStorage.removeItem(SESSION_KEY); }
+  function isLoggedIn() { return !!getSession(); }
+
+  function apiCall(method, url, body, cb) {
+    var sess = getSession();
+    var opts = { method: method, headers: {'Content-Type': 'application/json'} };
+    if (sess) { opts.headers['x-name'] = sess.name; opts.headers['x-token'] = sess.token; }
+    if (body) opts.body = JSON.stringify(body);
+    fetch(url, opts)
+      .then(function(r) { return r.json(); })
+      .then(cb)
+      .catch(function() { cb({ok:false, error:'Network error'}); });
+  }
+
+  function syncGameData() {
+    if (!isLoggedIn()) return;
+    var acc = getAccount();
+    apiCall('POST', '/api/save', {gameData: {
+      highestLevel: acc.highestLevel || 0,
+      rubies:       acc.rubies       || 0,
+      homePets:     acc.homePets     || []
+    }}, function() {});
+  }
+
+  function updateHubAccount() {
+    var el = document.getElementById('hub-account');
+    if (!el) return;
+    var sess = getSession();
+    if (sess) {
+      el.innerHTML = '👤 <b>' + sess.name + '</b> <button class="btn" style="font-size:10px;padding:2px 8px;margin-left:6px" onclick="showAccount()">Manage</button>';
+    } else {
+      el.innerHTML = '<button class="btn" onclick="showAccount()" style="font-size:11px;padding:4px 12px">👤 Login / Register</button>';
+    }
+  }
+
+  // ── Account screen ────────────────────────────────────────────────────────
+  window.showAccount = function() {
+    var sess = getSession();
+    var html;
+    if (sess) {
+      html  = '<div style="color:#c8a0e8;font-size:14px;text-align:center;margin-bottom:12px">Logged in as <b>' + sess.name + '</b></div>';
+      html += '<button class="btn" style="display:block;margin:8px auto;background:#500020;border-color:#a00040" onclick="doLogout()">🚪 Log Out</button>';
+    } else {
+      html  = '<div class="account-form">';
+      html += '<input id="acc-name" class="account-input" type="text" placeholder="Username" maxlength="20" autocomplete="username">';
+      html += '<input id="acc-pass" class="account-input" type="password" placeholder="Password" autocomplete="current-password">';
+      html += '<button class="btn btng" onclick="doLogin()" style="width:100%">🔑 Log In</button>';
+      html += '<button class="btn" onclick="doRegister()" style="width:100%">📝 Create Account</button>';
+      html += '</div>';
+      html += '<div id="acc-msg" class="meta-err"></div>';
+    }
+    document.getElementById('account-content').innerHTML = html;
+    showScreen('screen-account');
+  };
+
+  window.doLogin = function() {
+    var name = (document.getElementById('acc-name').value || '').trim();
+    var pass = document.getElementById('acc-pass').value;
+    var msg  = document.getElementById('acc-msg');
+    if (!name || !pass) { msg.textContent = 'Enter a username and password.'; return; }
+    msg.textContent = 'Logging in…';
+    apiCall('POST', '/api/login', {name: name, password: pass}, function(r) {
+      if (r.ok) { setSession(r.name, r.token); syncGameData(); window.showAccount(); }
+      else { msg.textContent = r.error || 'Login failed.'; }
+    });
+  };
+
+  window.doRegister = function() {
+    var name = (document.getElementById('acc-name').value || '').trim();
+    var pass = document.getElementById('acc-pass').value;
+    var msg  = document.getElementById('acc-msg');
+    if (!name || !pass) { msg.textContent = 'Enter a username and password.'; return; }
+    msg.textContent = 'Creating account…';
+    apiCall('POST', '/api/register', {name: name, password: pass}, function(r) {
+      if (r.ok) { setSession(r.name, r.token); syncGameData(); window.showAccount(); }
+      else { msg.textContent = r.error || 'Registration failed.'; }
+    });
+  };
+
+  window.doLogout = function() { clearSession(); showHub(); };
+
+  // ── Leaderboard ───────────────────────────────────────────────────────────
+  window.showLeaderboard = function() {
+    var list = document.getElementById('leaderboard-list');
+    list.innerHTML = '<div style="color:#c8a0e8;text-align:center;padding:20px">Loading…</div>';
+    showScreen('screen-leaderboard');
+    fetch('/api/leaderboard')
+      .then(function(r) { return r.json(); })
+      .then(function(rows) {
+        var sess = getSession();
+        var html = '';
+        rows.forEach(function(p, i) {
+          var self = sess && p.name === sess.name;
+          html += '<div class="lb-row' + (self ? ' lb-self' : '') + '">';
+          html += '<span class="lb-rank">#' + (i + 1) + '</span>';
+          html += '<span class="lb-name">' + p.name + (self ? ' (you)' : '') + '</span>';
+          html += '<span class="lb-level">Lv&nbsp;' + p.level + '</span>';
+          html += '<span class="lb-rubies">' + p.rubies + '&nbsp;🔴</span>';
+          html += '<span class="lb-pets">' + p.pets + '&nbsp;🐾</span>';
+          html += '</div>';
+        });
+        if (!rows.length) html = '<div style="color:#888;text-align:center;padding:20px">No players yet!</div>';
+        list.innerHTML = html;
+      })
+      .catch(function() {
+        list.innerHTML = '<div style="color:#f88;text-align:center;padding:20px">Could not reach server.</div>';
+      });
+  };
+
+  // ── Friends ───────────────────────────────────────────────────────────────
+  window.showFriends = function() {
+    var el = document.getElementById('friends-content');
+    if (!isLoggedIn()) {
+      el.innerHTML = '<div style="color:#f88;text-align:center;padding:20px">Please <button class="btn" onclick="showAccount()">log in</button> to use Friends.</div>';
+      showScreen('screen-friends');
+      return;
+    }
+    el.innerHTML = '<div style="color:#c8a0e8;text-align:center;padding:20px">Loading…</div>';
+    showScreen('screen-friends');
+    apiCall('GET', '/api/friends', null, renderFriends);
+  };
+
+  function renderFriends(r) {
+    var html = '';
+    html += '<div class="friends-add-row">';
+    html += '<input id="friend-add-name" class="account-input" type="text" placeholder="Player name" style="flex:1;width:auto">';
+    html += '<button class="btn btng" onclick="sendFriendRequest()">+ Add</button>';
+    html += '</div>';
+    html += '<div id="friends-msg" style="color:#88ff88;text-align:center;min-height:16px;font-size:12px"></div>';
+
+    var reqs = r.requests || [];
+    if (reqs.length) {
+      html += '<div class="friends-section-title">📬 Friend Requests (' + reqs.length + ')</div>';
+      reqs.forEach(function(from) {
+        html += '<div class="friend-row">';
+        html += '<span class="friend-name">' + from + '</span>';
+        html += '<button class="btn btng" style="font-size:11px;padding:3px 9px" onclick="acceptFriend(\'' + from + '\')">✓ Accept</button>';
+        html += '<button class="btn" style="font-size:11px;padding:3px 9px;background:#500020;border-color:#a00040" onclick="rejectFriend(\'' + from + '\')">✗ Reject</button>';
+        html += '</div>';
+      });
+    }
+
+    var friends = r.friends || [];
+    html += '<div class="friends-section-title">👫 Friends (' + friends.length + ')</div>';
+    if (friends.length) {
+      friends.forEach(function(f) {
+        html += '<div class="friend-row">';
+        html += '<span class="friend-online">' + (f.online ? '🟢' : '⚫') + '</span>';
+        html += '<span class="friend-name">' + f.name + '</span>';
+        html += '<span class="friend-info">Lv&nbsp;' + f.level + '&nbsp;·&nbsp;' + f.rubies + '&nbsp;🔴&nbsp;·&nbsp;' + f.pets + '&nbsp;🐾</span>';
+        html += '<button class="btn" style="font-size:10px;padding:2px 7px" onclick="initiateTrade(\'' + f.name + '\')">🔄 Trade</button>';
+        if (f.online) html += '<button class="btn" style="font-size:10px;padding:2px 7px;background:#200040;border-color:#8000c0" onclick="challengeArena(\'' + f.name + '\')">⚔️ Battle</button>';
+        html += '<button class="btn" style="font-size:10px;padding:2px 7px;background:#500020;border-color:#a00040" onclick="removeFriend(\'' + f.name + '\')">✕</button>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="color:#888;text-align:center;padding:10px;font-size:12px">No friends yet — search for a player above!</div>';
+    }
+    document.getElementById('friends-content').innerHTML = html;
+  }
+
+  window.sendFriendRequest = function() {
+    var name = (document.getElementById('friend-add-name').value || '').trim();
+    if (!name) return;
+    apiCall('POST', '/api/friends/request', {to: name}, function(r) {
+      var msg = document.getElementById('friends-msg');
+      if (msg) {
+        msg.style.color = r.ok ? '#88ff88' : '#ff8888';
+        msg.textContent = r.ok ? ('Request sent to ' + name + '!') : (r.error || 'Failed.');
+        setTimeout(function() { if (msg) msg.textContent = ''; }, 3000);
+      }
+    });
+  };
+
+  window.acceptFriend = function(from) {
+    apiCall('POST', '/api/friends/accept', {from: from}, function(r) { if (r.ok) window.showFriends(); });
+  };
+  window.rejectFriend = function(from) {
+    apiCall('POST', '/api/friends/reject', {from: from}, function(r) { if (r.ok) window.showFriends(); });
+  };
+  window.removeFriend = function(name) {
+    apiCall('DELETE', '/api/friends/' + name, null, function(r) { if (r.ok) window.showFriends(); });
+  };
+
+  // ── Trade ─────────────────────────────────────────────────────────────────
+  window.showTrade = function() {
+    var el = document.getElementById('trade-content');
+    if (!isLoggedIn()) {
+      el.innerHTML = '<div style="color:#f88;text-align:center;padding:20px">Please <button class="btn" onclick="showAccount()">log in</button> to use Trade.</div>';
+      showScreen('screen-trade');
+      return;
+    }
+    el.innerHTML = '<div style="color:#c8a0e8;text-align:center;padding:20px">Loading…</div>';
+    showScreen('screen-trade');
+    syncGameData();
+    apiCall('GET', '/api/trade/pending', null, renderTrades);
+  };
+
+  function renderTrades(trades) {
+    var html = '';
+    html += '<div class="friends-section-title">📬 Incoming Trades</div>';
+    if (trades && trades.length) {
+      trades.forEach(function(t) {
+        html += '<div class="trade-row">';
+        html += '<div class="trade-from">From: <b>' + t.from + '</b></div>';
+        var offerParts = [];
+        if (t.offer) {
+          if (t.offer.rubies) offerParts.push(t.offer.rubies + ' 🔴');
+          (t.offer.pets || []).forEach(function(p) { offerParts.push(p.e + ' ' + p.n); });
+        }
+        if (offerParts.length) html += '<div class="trade-offer">Offering: ' + offerParts.join(', ') + '</div>';
+        var wantParts = [];
+        if (t.want) {
+          if (t.want.rubies) wantParts.push(t.want.rubies + ' 🔴');
+          (t.want.pets || []).forEach(function(p) { wantParts.push(p.e + ' ' + p.n); });
+        }
+        if (wantParts.length) html += '<div class="trade-want">Wants: ' + wantParts.join(', ') + '</div>';
+        html += '<div style="display:flex;gap:8px;margin-top:4px">';
+        html += '<button class="btn btng" onclick="respondTrade(\'' + t.id + '\',true)">✓ Accept</button>';
+        html += '<button class="btn" style="background:#500020;border-color:#a00040" onclick="respondTrade(\'' + t.id + '\',false)">✗ Reject</button>';
+        html += '</div></div>';
+      });
+    } else {
+      html += '<div style="color:#888;text-align:center;padding:8px;font-size:12px">No pending trades.</div>';
+    }
+
+    html += '<div class="friends-section-title" style="margin-top:10px">🔄 Send a Trade</div>';
+    html += '<div style="color:#9070b0;font-size:11px;text-align:center;margin-bottom:6px">Enter a friend\'s name to start a trade</div>';
+    html += '<div class="friends-add-row">';
+    html += '<input id="trade-to-name" class="account-input" type="text" placeholder="Friend\'s name" style="flex:1;width:auto">';
+    html += '<button class="btn" onclick="loadTradeForm()">Load</button>';
+    html += '</div>';
+    html += '<div id="trade-form" style="width:100%"></div>';
+
+    document.getElementById('trade-content').innerHTML = html;
+  }
+
+  window.respondTrade = function(id, accept) {
+    apiCall('POST', '/api/trade/respond', {tradeId: id, accept: accept}, function(r) {
+      if (r.ok && r.accepted && r.myNewData) {
+        var acc = getAccount();
+        if (r.myNewData.homePets !== undefined) acc.homePets = r.myNewData.homePets;
+        if (r.myNewData.rubies  !== undefined) acc.rubies   = r.myNewData.rubies;
+        saveAccount(acc);
+      }
+      apiCall('GET', '/api/trade/pending', null, renderTrades);
+    });
+  };
+
+  window.loadTradeForm = function() {
+    var toName = (document.getElementById('trade-to-name').value || '').trim();
+    if (!toName) return;
+    var formEl = document.getElementById('trade-form');
+    formEl.innerHTML = '<div style="color:#c8a0e8;text-align:center;padding:10px">Loading…</div>';
+    apiCall('GET', '/api/user/' + toName, null, function(r) {
+      if (!r.ok) {
+        formEl.innerHTML = '<div style="color:#f88;text-align:center;padding:10px">' + (r.error || 'Player not found.') + '</div>';
+        return;
+      }
+      var acc = getAccount();
+      var myPets   = acc.homePets || [];
+      var theirPets = r.pets || [];
+      var html = '';
+      html += '<div class="trade-section"><b>Your pets to offer:</b></div>';
+      if (myPets.length) {
+        myPets.forEach(function(p, i) {
+          html += '<label class="trade-pet-label"><input type="checkbox" class="trade-offer-pet" data-uid="' + p.uid + '" data-idx="' + i + '">&nbsp;' + p.e + '&nbsp;' + p.n + '</label>';
+        });
+      } else {
+        html += '<div style="color:#888;font-size:12px">No pets in home.</div>';
+      }
+      html += '<div class="trade-section"><b>Rubies to offer:</b>&nbsp;<input id="trade-offer-rubies" type="number" min="0" value="0" style="width:80px;background:#2a1a3a;color:#fff;border:1px solid #6040a0;border-radius:4px;padding:2px 6px;font-size:13px"></div>';
+
+      html += '<div class="trade-section" style="margin-top:10px"><b>' + r.name + '\'s pets (select to request):</b></div>';
+      if (theirPets.length) {
+        theirPets.forEach(function(p) {
+          html += '<label class="trade-pet-label"><input type="checkbox" class="trade-want-pet" data-uid="' + p.uid + '" data-e="' + p.e + '" data-n="' + p.n + '">&nbsp;' + p.e + '&nbsp;' + p.n + '</label>';
+        });
+      } else {
+        html += '<div style="color:#888;font-size:12px">' + r.name + ' has no pets.</div>';
+      }
+      html += '<div class="trade-section"><b>Rubies to request:</b>&nbsp;<input id="trade-want-rubies" type="number" min="0" value="0" style="width:80px;background:#2a1a3a;color:#fff;border:1px solid #6040a0;border-radius:4px;padding:2px 6px;font-size:13px"></div>';
+      html += '<button class="btn btng" style="display:block;margin:12px auto" onclick="sendTradeRequest(\'' + toName + '\')">📤 Send Trade</button>';
+      html += '<div id="trade-send-msg" style="text-align:center;min-height:16px;font-size:12px"></div>';
+      formEl.innerHTML = html;
+    });
+  };
+
+  window.initiateTrade = function(name) {
+    window.showTrade();
+    setTimeout(function() {
+      var el = document.getElementById('trade-to-name');
+      if (el) { el.value = name; window.loadTradeForm(); }
+    }, 120);
+  };
+
+  window.sendTradeRequest = function(toName) {
+    var acc = getAccount();
+    var myPets   = acc.homePets || [];
+    var offerPets = [];
+    document.querySelectorAll('.trade-offer-pet:checked').forEach(function(cb) {
+      var p = myPets[parseInt(cb.dataset.idx)];
+      if (p) offerPets.push(p);
+    });
+    var wantPets = [];
+    document.querySelectorAll('.trade-want-pet:checked').forEach(function(cb) {
+      wantPets.push({uid: cb.dataset.uid, e: cb.dataset.e, n: cb.dataset.n});
+    });
+    var offerRubies = parseInt(document.getElementById('trade-offer-rubies').value) || 0;
+    var wantRubies  = parseInt(document.getElementById('trade-want-rubies').value)  || 0;
+    apiCall('POST', '/api/trade/request', {
+      to:    toName,
+      offer: {pets: offerPets, rubies: offerRubies},
+      want:  {pets: wantPets,  rubies: wantRubies}
+    }, function(r) {
+      var msg = document.getElementById('trade-send-msg');
+      if (msg) {
+        msg.style.color = r.ok ? '#88ff88' : '#ff8888';
+        msg.textContent = r.ok ? 'Trade request sent!' : (r.error || 'Failed.');
+      }
+    });
+  };
+
+  // ── Notification overlay ──────────────────────────────────────────────────
+  function hideNotif() {
+    var el = document.getElementById('notif-overlay');
+    if (el) { el.style.display = 'none'; el.dataset.active = ''; }
+  }
+
+  function showNotifBox(html) {
+    var el = document.getElementById('notif-overlay');
+    if (!el) return;
+    el.innerHTML = '<div class="notif-box">' + html + '</div>';
+    el.style.display = 'flex';
+  }
+
+  function showArenaResult(result, myNewData) {
+    var acc = ensureItems(getAccount());
+    var sess = getSession();
+    var myName = sess ? sess.name : '';
+    var won = result.winner === myName;
+    if (myNewData && myNewData.homePets !== undefined) { acc.homePets = myNewData.homePets; saveAccount(acc); }
+    var pet = result.transferredPet;
+    var myPwr   = myName === result.challenger ? result.challengerPower : result.defenderPower;
+    var oppPwr  = myName === result.challenger ? result.defenderPower   : result.challengerPower;
+    showNotifBox(
+      '<div class="notif-title" style="color:' + (won ? '#ffd700' : '#ff4444') + '">' + (won ? '🏆 YOU WON!' : '💀 YOU LOST!') + '</div>' +
+      '<div class="notif-body">' +
+      (pet ? (won ? '🎉 You got ' + pet.e + ' ' + pet.n + '!' : '😢 You lost ' + pet.e + ' ' + pet.n + '!') : 'No pets to transfer.') +
+      '<br><small>Your power: ' + myPwr + ' · Opponent: ' + oppPwr + '</small>' +
+      '</div>' +
+      '<button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'
+    );
+  }
+
+  window.quickRespondTrade = function(tradeId, accept) {
+    hideNotif();
+    apiCall('POST', '/api/trade/respond', { tradeId: tradeId, accept: accept }, function(r) {
+      if (r.ok && r.accepted && r.myNewData) {
+        var acc = getAccount();
+        if (r.myNewData.homePets !== undefined) acc.homePets = r.myNewData.homePets;
+        if (r.myNewData.rubies   !== undefined) acc.rubies   = r.myNewData.rubies;
+        saveAccount(acc);
+      }
+      showNotifBox('<div class="notif-title">' + (accept && r.ok && r.accepted ? '✓ Trade done!' : '✗ Trade declined.') + '</div>' +
+        '<button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>');
+    });
+  };
+
+  window.respondArena = function(accept) {
+    hideNotif();
+    apiCall('POST', '/api/arena/respond', { accept: accept }, function(r) {
+      if (!r.ok) { showNotifBox('<div class="notif-title" style="color:#f88">' + (r.error||'Challenge expired.') + '</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
+      if (!accept) { showNotifBox('<div class="notif-title">⚔️ Challenge declined.</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
+      if (r.result) showArenaResult(r.result, r.myNewData);
+    });
+  };
+
+  window.challengeArena = function(name) {
+    apiCall('POST', '/api/arena/challenge', { to: name }, function(r) {
+      if (!r.ok) { showNotifBox('<div class="notif-title" style="color:#f88">⚠️ ' + (r.error||'Could not send challenge.') + '</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">OK</button>'); return; }
+      showNotifBox('<div class="notif-title">⚔️ Challenge sent to <b>' + name + '</b>!</div><div class="notif-body">Waiting for their response…</div><button class="btn" onclick="(function(){document.getElementById(\'notif-overlay\').style.display=\'none\';})()">Close</button>');
+      var check = setInterval(function() {
+        apiCall('GET', '/api/arena/result', null, function(res) {
+          if (res.result) { clearInterval(check); showArenaResult(res.result, null); }
+        });
+      }, 3000);
+      setTimeout(function() { clearInterval(check); }, 130000);
+    });
+  };
+
+  // ── Polling (trade + arena notifications) ─────────────────────────────────
+  var _pollActive = {};
+  function startPolling() {
+    if (_pollActive.id) return;
+    _pollActive.id = setInterval(function() {
+      if (!isLoggedIn()) return;
+      apiCall('GET', '/api/poll', null, function(r) {
+        if (!r.ok) return;
+        var overlay = document.getElementById('notif-overlay');
+        var alreadyShowing = overlay && overlay.style.display !== 'none';
+        if (alreadyShowing) return;
+        // Arena result (challenger polling)
+        if (r.arenaResult) { showArenaResult(r.arenaResult, null); return; }
+        // Arena invite
+        if (r.arena) {
+          var key = 'arena_' + r.arena.from + '_' + r.arena.ts;
+          if (_pollActive.shownArena === key) return;
+          _pollActive.shownArena = key;
+          showNotifBox(
+            '<div class="notif-title">⚔️ Battle from <b>' + r.arena.from + '</b>!</div>' +
+            '<div class="notif-body">They want to battle! If you lose, your strongest pet goes to them.</div>' +
+            '<div class="notif-btns"><button class="btn btng" onclick="respondArena(true)">⚔️ Accept</button>' +
+            '&nbsp;<button class="btn" style="background:#500020;border-color:#a00040" onclick="respondArena(false)">✗ Decline</button></div>'
+          );
+          return;
+        }
+        // Trade notification
+        if (r.trades && r.trades.length) {
+          var t = r.trades[0];
+          var key2 = 'trade_' + t.id;
+          if (_pollActive.shownTrade === key2) return;
+          _pollActive.shownTrade = key2;
+          var offerParts = [], wantParts = [];
+          if (t.offer) { if (t.offer.rubies) offerParts.push(t.offer.rubies+'🔴'); (t.offer.pets||[]).forEach(function(p){offerParts.push(p.e+' '+p.n);}); }
+          if (t.want)  { if (t.want.rubies)  wantParts.push(t.want.rubies+'🔴');   (t.want.pets||[]).forEach(function(p){wantParts.push(p.e+' '+p.n);}); }
+          showNotifBox(
+            '<div class="notif-title">🔄 Trade from <b>' + t.from + '</b></div>' +
+            '<div class="notif-body">' +
+            (offerParts.length ? 'Offering: ' + offerParts.join(', ') + '<br>' : '') +
+            (wantParts.length  ? 'Wants: '    + wantParts.join(', ')           : '') +
+            '</div>' +
+            '<div class="notif-btns"><button class="btn btng" onclick="quickRespondTrade(\'' + t.id + '\',true)">✓ Accept</button>' +
+            '&nbsp;<button class="btn" style="background:#500020;border-color:#a00040" onclick="quickRespondTrade(\'' + t.id + '\',false)">✗ Decline</button></div>'
+          );
+        }
+      });
+    }, 5000);
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     var acc = loadAccount();
     if (!acc) acc = {};
     ensureItems(acc);
     _account = acc;
+    updateHabitatBonusExport();
     var mv = parseFloat(localStorage.getItem('af_music_vol') || '0.1');
     var sv = parseFloat(localStorage.getItem('af_sfx_vol')   || '1.0');
     var ms = document.getElementById('music-vol-slider');
@@ -1544,5 +2127,6 @@ function speciesCount(acc, petId) {
     if (ms) { ms.value = mv; document.getElementById('music-vol-pct').textContent = Math.round(mv * 100) + '%'; }
     if (ss) { ss.value = sv; document.getElementById('sfx-vol-pct').textContent   = Math.round(sv * 100) + '%'; }
     showHub();
+    startPolling();
   });
 })();

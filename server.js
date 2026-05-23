@@ -2,6 +2,7 @@ const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
 const crypto  = require('crypto');
+const bcrypt  = require('bcryptjs');
 
 const app  = express();
 const PORT = 5500;
@@ -11,11 +12,13 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // ── In-memory state ──────────────────────────────────────────────────────────
-var online      = {};  // { name: lastSeenTs }
-var chats       = {};  // { roomId: [{from,msg,time}] }
-var tradePend   = {};  // { name: [tradeObj] }
-var coopRooms   = {};  // { roomId: roomObj }
-var coopInvites = {};  // { name: {roomId,from,ts} }
+var online        = {};  // { name: lastSeenTs }
+var chats         = {};  // { roomId: [{from,msg,time}] }
+var tradePend     = {};  // { name: [tradeObj] }
+var coopRooms     = {};  // { roomId: roomObj }
+var coopInvites   = {};  // { name: {roomId,from,ts} }
+var arenaInvites  = {};  // { name: {from,fromPets,ts} }
+var arenaResults  = {};  // { name: resultObj }
 
 // ── DB ───────────────────────────────────────────────────────────────────────
 function load() {
@@ -24,9 +27,20 @@ function load() {
 function save(db) { fs.writeFileSync(DB, JSON.stringify(db, null, 2)); }
 
 // ── Crypto ───────────────────────────────────────────────────────────────────
-function sha256(s) { return crypto.createHash('sha256').update(s).digest('hex'); }
 function genToken() { return crypto.randomBytes(24).toString('hex'); }
 function isOnline(name) { return !!(online[name] && Date.now() - online[name] < 30000); }
+
+// Hash a new password with bcrypt (salt is embedded in the hash string)
+function hashPassword(pw) { return bcrypt.hashSync(pw, 10); }
+
+// Verify a password against a stored hash (supports bcrypt and legacy sha256)
+function checkPassword(pw, stored) {
+  if (!stored) return false;
+  if (stored.startsWith('$2')) return bcrypt.compareSync(pw, stored);
+  // Legacy sha256 — compare then upgrade inline (caller must save db)
+  var sha = crypto.createHash('sha256').update(pw).digest('hex');
+  return sha === stored;
+}
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 function auth(req, res, next) {
@@ -53,7 +67,7 @@ app.post('/api/register', (req, res) => {
   var db = load();
   if (db[name]) return res.json({ ok:false, error:'Name already taken.' });
   var token = genToken();
-  db[name] = { passwordHash:sha256(password), token, friends:[], friendRequests:[], gameData:{} };
+  db[name] = { passwordHash:hashPassword(password), token, friends:[], friendRequests:[], gameData:{} };
   save(db);
   res.json({ ok:true, token, name, gameData:{} });
 });
@@ -65,13 +79,17 @@ app.post('/api/login', (req, res) => {
   var db  = load();
   var acc = db[name];
   if (!acc) return res.json({ ok:false, error:'Account not found.' });
-  // Support migration from legacy plaintext passwords
   var valid = false;
   if (acc.passwordHash) {
-    valid = acc.passwordHash === sha256(password);
+    valid = checkPassword(password, acc.passwordHash);
+    // Upgrade legacy sha256 hash to bcrypt on successful login
+    if (valid && !acc.passwordHash.startsWith('$2')) {
+      acc.passwordHash = hashPassword(password);
+    }
   } else if (acc.password) {
+    // Migrate remaining plaintext (should not exist after running migrate-passwords.js)
     valid = acc.password === password;
-    if (valid) { acc.passwordHash = sha256(password); delete acc.password; }
+    if (valid) { acc.passwordHash = hashPassword(password); delete acc.password; }
   }
   if (!valid) return res.json({ ok:false, error:'Wrong password.' });
   var token = genToken();
@@ -305,6 +323,77 @@ app.get('/api/online', (req, res) => {
   var alive = {};
   Object.keys(online).forEach(function(n) { if (isOnline(n)) alive[n] = true; });
   res.json(alive);
+});
+
+// ── Poll (combined notification check) ───────────────────────────────────────
+app.get('/api/poll', auth, (req, res) => {
+  online[req.name] = Date.now();
+  var trades = (tradePend[req.name] || []).filter(function(r) { return Date.now() - r.ts < 300000; });
+  tradePend[req.name] = trades;
+  var arena = arenaInvites[req.name];
+  if (arena && Date.now() - arena.ts > 120000) { delete arenaInvites[req.name]; arena = null; }
+  var arRes = arenaResults[req.name] || null;
+  if (arRes) delete arenaResults[req.name];
+  res.json({ ok:true, trades, arena: arena || null, arenaResult: arRes });
+});
+
+// ── Arena ─────────────────────────────────────────────────────────────────────
+app.post('/api/arena/challenge', auth, (req, res) => {
+  var { to } = req.body;
+  var db = req.db;
+  if (!db[to]) return res.json({ ok:false, error:'Player not found.' });
+  if (!isOnline(to)) return res.json({ ok:false, error:'That player is not online right now.' });
+  var myGD   = req.acc.gameData || {};
+  var myPets = (myGD.homePets || []).map(function(p) { return { id:p.id, e:p.e, n:p.n, uid:p.uid, atk:p.atk||1 }; });
+  arenaInvites[to] = { from:req.name, fromPets:myPets, ts:Date.now() };
+  res.json({ ok:true });
+});
+
+app.post('/api/arena/respond', auth, (req, res) => {
+  var { accept } = req.body;
+  var invite = arenaInvites[req.name];
+  if (!invite || Date.now() - invite.ts > 120000) { delete arenaInvites[req.name]; return res.json({ ok:false, error:'Challenge expired.' }); }
+  var from = invite.from;
+  delete arenaInvites[req.name];
+  if (!accept) return res.json({ ok:true, accepted:false });
+
+  var db     = load();
+  var fromGD = (db[from] && db[from].gameData) || {};
+  var toGD   = req.acc.gameData || {};
+  var fromPets = fromGD.homePets || [];
+  var toPets   = toGD.homePets   || [];
+
+  var fromPwr = fromPets.reduce(function(s, p) { return s + (p.atk||1); }, 0) * (0.8 + Math.random() * 0.4);
+  var toPwr   = toPets.reduce(function(s, p)   { return s + (p.atk||1); }, 0) * (0.8 + Math.random() * 0.4);
+  var challengerWins = fromPwr >= toPwr;
+  var winner = challengerWins ? from      : req.name;
+  var loser  = challengerWins ? req.name  : from;
+
+  var loserPets = loser === req.name ? toPets : fromPets;
+  var strongest = null;
+  loserPets.forEach(function(p) { if (!strongest || (p.atk||0) > (strongest.atk||0)) strongest = p; });
+
+  if (strongest && db[winner] && db[loser]) {
+    (db[winner].gameData = db[winner].gameData || {}).homePets = (db[winner].gameData.homePets||[]).concat([strongest]);
+    var loserAccGD = db[loser].gameData = db[loser].gameData || {};
+    loserAccGD.homePets = (loserAccGD.homePets||[]).filter(function(p) { return p.uid !== strongest.uid; });
+    save(db);
+  }
+
+  var result = { challenger:from, defender:req.name, winner, loser,
+    transferredPet:strongest, challengerPower:Math.round(fromPwr), defenderPower:Math.round(toPwr), ts:Date.now() };
+  arenaResults[from] = result;
+
+  var myNewPets = loser === req.name && strongest
+    ? toPets.filter(function(p) { return p.uid !== strongest.uid; })
+    : (winner === req.name && strongest ? toPets.concat([strongest]) : toPets);
+  res.json({ ok:true, accepted:true, result, myNewData:{ homePets:myNewPets } });
+});
+
+app.get('/api/arena/result', auth, (req, res) => {
+  var result = arenaResults[req.name] || null;
+  if (result) delete arenaResults[req.name];
+  res.json({ ok:true, result });
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────

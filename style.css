@@ -157,6 +157,34 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   font-size:11px;
 }
 
+/* Notification overlay */
+.notif-box {
+  background:#1a0835; border:2px solid #9040e0; border-radius:14px;
+  padding:20px 24px; max-width:340px; width:90%; text-align:center;
+  box-shadow:0 0 40px rgba(160,60,255,0.6);
+}
+.notif-title { font-size:17px; font-weight:bold; color:#f0e0ff; margin-bottom:8px; }
+.notif-body  { font-size:12px; color:#c0a0e8; margin-bottom:12px; line-height:1.5; }
+.notif-btns  { display:flex; gap:10px; justify-content:center; margin-top:8px; }
+
+/* Team portrait bar */
+#teambar { display:flex; gap:3px; align-items:center; }
+.team-portrait {
+  display:flex; flex-direction:column; align-items:center;
+  gap:1px; padding:2px 4px; border-radius:5px; min-width:42px;
+  border:1px solid #6040a0; background:rgba(40,10,80,.85);
+  cursor:pointer; font-size:10px; transition:border-color .12s;
+}
+.team-portrait:hover { border-color:#a060ff; }
+.team-active { border-color:#ffd700 !important; background:rgba(60,50,5,.9) !important; box-shadow:0 0 6px rgba(255,215,0,0.45); }
+.team-dead   { opacity:0.35; cursor:default; pointer-events:none; }
+.tp-emoji { font-size:15px; line-height:1; }
+.tp-name  { font-size:7px; color:#c0a0ff; max-width:42px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-hp    { width:38px; height:4px; background:#3a0018; border-radius:2px; overflow:hidden; margin:1px 0; }
+.tp-hpfill{ height:100%; background:#44dd44; border-radius:2px; }
+.tp-blast { font-size:7px; color:#80c0ff; }
+.tp-locked{ color:#585858 !important; }
+
 /* Game buttons — visible on all devices */
 #touch-atk, #touch-shop, #food-btn {
   position:absolute;bottom:18px;z-index:10;
@@ -509,7 +537,8 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
   /* Hide less-critical HUD stats on phones to prevent overflow */
   #hud .stat:nth-child(3), /* ZONE */
   #hud .stat:nth-child(5), /* SCORE */
-  #hud .stat:nth-child(6)  /* ENEMIES */
+  #hud .stat:nth-child(6), /* ENEMIES */
+  #hud .stat:nth-child(7)  /* TEAM */
     { display:none; }
   #lvlmap { display:none; }
 
@@ -785,3 +814,64 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none;}
 }
 
 .result-award .award-ruby{color:#44ff88;margin-left:4px;}
+
+/* ── Hub social buttons ───────────────────────────────────── */
+.hub-social-btn{background:linear-gradient(135deg,#0a2a4a,#061830);border-color:#2060a0;}
+.hub-social-btn:hover{background:linear-gradient(135deg,#0e3860,#0a2040);border-color:#4090d0;}
+.hub-account{flex:1;color:#d0b8ff;font-size:13px;display:flex;align-items:center;gap:8px;}
+
+/* ── Account screen ──────────────────────────────────────── */
+.account-form{width:100%;display:flex;flex-direction:column;gap:10px;align-items:center;}
+.account-input{
+  width:100%;padding:10px 14px;box-sizing:border-box;
+  background:rgba(0,0,0,0.4);border:1px solid #6030a0;border-radius:8px;
+  color:#f0e8ff;font-family:'Courier New',monospace;font-size:14px;
+  outline:none;
+}
+.account-input:focus{border-color:#c060ff;}
+.account-input::placeholder{color:#604080;}
+
+/* ── Leaderboard ─────────────────────────────────────────── */
+.leaderboard-list{width:100%;display:flex;flex-direction:column;gap:4px;}
+.lb-row{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(20,8,44,0.9);border:1px solid #3a1a6a;border-radius:8px;
+  padding:7px 10px;font-size:13px;
+}
+.lb-row.lb-self{border-color:#8040d0;background:rgba(40,12,80,0.9);}
+.lb-rank{color:#7050a0;font-size:11px;width:28px;text-align:right;flex-shrink:0;}
+.lb-name{color:#e0c8ff;font-weight:bold;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.lb-level{color:#ffd700;font-size:12px;flex-shrink:0;}
+.lb-rubies{color:#ff9090;font-size:12px;flex-shrink:0;}
+.lb-pets{color:#88ddaa;font-size:12px;flex-shrink:0;}
+
+/* ── Friends & Trade shared ──────────────────────────────── */
+.friends-section-title{
+  width:100%;color:#c080e8;font-size:12px;font-weight:bold;
+  border-bottom:1px solid #3a1a6a;padding-bottom:4px;margin-top:6px;
+}
+.friends-add-row{display:flex;gap:8px;width:100%;align-items:center;}
+.friend-row{
+  display:flex;align-items:center;gap:6px;width:100%;
+  background:rgba(20,8,44,0.9);border:1px solid #3a1a6a;border-radius:8px;
+  padding:7px 10px;flex-wrap:wrap;
+}
+.friend-online{flex-shrink:0;}
+.friend-name{color:#e0c8ff;font-weight:bold;flex:1;}
+.friend-info{color:#9070c0;font-size:11px;}
+
+/* ── Trade ───────────────────────────────────────────────── */
+.trade-row{
+  width:100%;background:rgba(20,8,44,0.9);border:1px solid #3a1a6a;border-radius:8px;
+  padding:10px;display:flex;flex-direction:column;gap:5px;
+}
+.trade-from{color:#e0c8ff;font-size:13px;}
+.trade-offer{color:#88ff88;font-size:12px;}
+.trade-want{color:#ff9090;font-size:12px;}
+.trade-section{width:100%;color:#c0a0e0;font-size:12px;margin-top:6px;}
+.trade-pet-label{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(30,10,60,0.8);border:1px solid #4a2a7a;border-radius:6px;
+  padding:4px 8px;margin:2px;color:#e0c8ff;font-size:12px;cursor:pointer;
+}
+.trade-pet-label:hover{border-color:#8040d0;}

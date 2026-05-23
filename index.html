@@ -15,6 +15,7 @@
 <div id="screen-hub" class="meta-screen" style="display:none">
   <div class="hub-wrap">
     <div class="hub-header">
+      <div id="hub-account" class="hub-account"></div>
       <div class="hub-stats">
         <span id="hub-rubies" class="hub-rubies">0 🔴</span>
         <span id="hub-best" class="hub-best">Best: Level 0</span>
@@ -83,12 +84,32 @@
       <button class="hub-action-btn hub-sub-btn" onclick="showSubscription()">
         <span class="hab-icon">👑</span>
         <span class="hab-label">Subscribe</span>
-        <span class="hab-desc">Premium perks for €5/month<br><small>Faster dragons · Cheaper shops</small></span>
+        <span class="hab-desc">Premium perks for €2/month<br><small>Faster dragons · Cheaper shops</small></span>
       </button>
       <button class="hub-action-btn hub-boss-btn" onclick="playBossRun()">
         <span class="hab-icon">🌠</span>
         <span class="hab-label">Boss Fight</span>
         <span class="hab-desc">Face the Cosmic Terror!<br><small>Once per 90 days · +10,000 🔴</small></span>
+      </button>
+      <button class="hub-action-btn hub-social-btn" onclick="showLeaderboard()">
+        <span class="hab-icon">🏆</span>
+        <span class="hab-label">Leaderboard</span>
+        <span class="hab-desc">Top 50 players worldwide<br><small>Ranked by level &amp; rubies</small></span>
+      </button>
+      <button class="hub-action-btn hub-social-btn" onclick="showFriends()">
+        <span class="hab-icon">👫</span>
+        <span class="hab-label">Friends</span>
+        <span class="hab-desc">Add friends, see who's online<br><small>Login required</small></span>
+      </button>
+      <button class="hub-action-btn hub-social-btn" onclick="showTrade()">
+        <span class="hab-icon">🔄</span>
+        <span class="hab-label">Trade</span>
+        <span class="hab-desc">Exchange pets &amp; rubies<br><small>Login required</small></span>
+      </button>
+      <button class="hub-action-btn hub-social-btn" onclick="showFriends()">
+        <span class="hab-icon">⚔️</span>
+        <span class="hab-label">Arena</span>
+        <span class="hab-desc">Battle friends for their pets!<br><small>Both players must be online</small></span>
       </button>
     </div>
   </div>
@@ -196,14 +217,14 @@
 <div id="screen-subscription" class="meta-screen" style="display:none">
   <div class="meta-card weapon-card">
     <div class="meta-title">👑 Subscription</div>
-    <div class="sub-price">€5 / month</div>
+    <div class="sub-price">€2 / month</div>
     <div class="sub-benefits">
       <div class="sub-benefit">🥚 Dragon hatching: 30 days → <b>10 days</b></div>
       <div class="sub-benefit">💚 Exchange rate: 70 🔴 → <b>30 🔴</b> per emerald</div>
       <div class="sub-benefit">🛒 All shops: <b>-25 🔴</b> discount (chests excluded)</div>
     </div>
     <div id="sub-status" class="sub-status-row"></div>
-    <button id="sub-btn" class="btn btng sub-buy-btn" onclick="activateSubscription()">👑 Subscribe — €5/month</button>
+    <button id="sub-btn" class="btn btng sub-buy-btn" onclick="activateSubscription()">👑 Subscribe — €2/month</button>
     <div style="color:#888;font-size:10px;text-align:center;margin-top:6px">Payment integration coming soon — click to activate for demo</div>
     <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
   </div>
@@ -215,7 +236,44 @@
     <div class="meta-title">🍎 Food Shop</div>
     <div class="shop-rubies">Rubies: <span id="food-shop-rubies">0 🔴</span></div>
     <div style="color:#ffcc88;font-size:11px;text-align:center;margin-bottom:6px">Food persists in your backpack until eaten. Use F or the backpack button in-game!</div>
+    <div id="food-shop-bonus" style="display:none;background:#1a3a1a;border:1.5px solid #44ff88;border-radius:8px;padding:8px 14px;margin-bottom:8px;color:#44ff88;font-size:13px;text-align:center"></div>
     <div id="food-shop-grid"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Account ────────────────────────────────────────────── -->
+<div id="screen-account" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">👤 Account</div>
+    <div id="account-content"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Leaderboard ───────────────────────────────────────── -->
+<div id="screen-leaderboard" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🏆 Leaderboard</div>
+    <div id="leaderboard-list" class="leaderboard-list"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Friends ───────────────────────────────────────────── -->
+<div id="screen-friends" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">👫 Friends</div>
+    <div id="friends-content"></div>
+    <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
+  </div>
+</div>
+
+<!-- ── Trade ─────────────────────────────────────────────── -->
+<div id="screen-trade" class="meta-screen" style="display:none">
+  <div class="meta-card weapon-card">
+    <div class="meta-title">🔄 Trade</div>
+    <div id="trade-content"></div>
     <button class="btn hub-back-btn" onclick="showHub()">🏠 Back to Hub</button>
   </div>
 </div>
@@ -243,6 +301,7 @@
     <div class="stat"><div class="lbl">GEMS</div><span id="gtxt" style="color:#ffd700">0💎</span></div>
     <div class="stat"><div class="lbl">SCORE</div><span id="stxt">0</span></div>
     <div class="stat"><div class="lbl">ENEMIES</div><span id="etxt" style="color:#ff7070">0</span></div>
+    <div class="stat"><div class="lbl">TEAM</div><div id="teambar"></div></div>
     <div class="stat"><div class="lbl">BLAST</div><span id="blasttxt" style="color:#80c0ff">0/100</span></div>
     <div class="stat" style="margin-left:auto"><div class="lbl">PETS</div><div id="petbar"></div></div>
     <button class="btn hud-exit-btn" onclick="metaReturn(false)">🏠 Hub</button>
@@ -300,6 +359,9 @@
     <span id="sfx-vol-pct" class="audio-pct">100%</span>
   </div>
 </div>
+
+<!-- Notification overlay (trade/arena popups) -->
+<div id="notif-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.72);align-items:center;justify-content:center;"></div>
 
 <script src="music.js"></script>
 <script src="meta.js"></script>
