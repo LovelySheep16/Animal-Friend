@@ -1845,10 +1845,14 @@ function speciesCount(acc, petId) {
     var msg  = document.getElementById('acc-msg');
     if (!name || !pass) { msg.textContent = 'Enter a username and password.'; return; }
     msg.textContent = 'Logging in…';
-    apiCall('POST', '/api/login', {name: name, password: pass}, function(r) {
-      if (r.ok) { setSession(r.name, r.token); syncGameData(); window.showAccount(); }
-      else { msg.textContent = r.error || 'Login failed.'; }
-    });
+    // Fetch a one-time nonce before sending credentials.
+    // Each nonce is consumed on use so a captured request cannot be replayed.
+    fetch('/api/nonce').then(function(res) { return res.json(); }).then(function(nr) {
+      apiCall('POST', '/api/login', {name: name, password: pass, nonce: nr.nonce}, function(r) {
+        if (r.ok) { setSession(r.name, r.token); syncGameData(); window.showAccount(); }
+        else { msg.textContent = r.error || 'Login failed.'; }
+      });
+    }).catch(function() { msg.textContent = 'Could not reach server.'; });
   };
 
   window.doRegister = function() {
