@@ -1704,8 +1704,13 @@ function speciesCount(acc, petId) {
     if (sess) {
       el.innerHTML = '👤 <b>' + sess.name + '</b> <button class="btn" style="font-size:10px;padding:2px 8px;margin-left:6px" onclick="showAccount()">Manage</button>';
     } else {
-      el.innerHTML = '<button class="btn" onclick="showAccount()" style="font-size:11px;padding:4px 12px">👤 Login / Register</button>';
+      el.innerHTML = '';
     }
+    // Update the hub tab label too
+    var lbl  = document.getElementById('hub-login-label');
+    var desc = document.getElementById('hub-login-desc');
+    if (lbl)  lbl.textContent  = sess ? sess.name : 'Login';
+    if (desc) desc.innerHTML   = sess ? 'Manage your account<br><small>Logged in ✓</small>' : 'Sign in or create account<br><small>Required for multiplayer</small>';
   }
 
   // ── Account screen ────────────────────────────────────────────────────────
