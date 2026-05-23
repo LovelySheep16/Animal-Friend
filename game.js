@@ -405,7 +405,7 @@ function Game() {
   // Team system
   this.team = []; this.teamIdx = 0;
   this.teamHp = []; this.teamBlastCharge = []; this.teamBlastReady = [];
-  this.teamDeadThisRun = []; this.teamRunKills = [];
+  this.teamDeadThisRun = []; this.teamRunKills = []; this.teamHealTim = [];
   this.charKillsData = {};
   // Boss run
   this.isBossRun = false; this.bossLasers = []; this.bossKills = 0; this.bossPetDmg = 10;
@@ -1335,6 +1335,39 @@ Game.prototype.update = function(dt) {
     if (this.potionTick >= 20) { this.potionTick -= 20; p.hp = Math.min(p.mhp, p.hp + 10 * this.upg.potion); }
   }
 
+  // Team healer characters: heal pets, active player, and all teammates (revive dead ones)
+  var nowH = Date.now();
+  for (var _ti = 0; _ti < this.team.length; _ti++) {
+    var _tChar = this.team[_ti];
+    if (!_tChar || _tChar.role !== 'heal' || !_tChar.heal || !_tChar.hi) continue;
+    if (this.teamDeadThisRun[_ti]) continue;
+    if (!this.teamHealTim[_ti]) this.teamHealTim[_ti] = nowH;
+    if (nowH - this.teamHealTim[_ti] < _tChar.hi) continue;
+    this.teamHealTim[_ti] = nowH;
+    var _hAmt = _tChar.heal;
+    // Heal active player
+    p.hp = Math.min(p.mhp, p.hp + _hAmt);
+    this.fl(p.x, p.y - 22, '+' + _hAmt + '❤️ ' + _tChar.e, '#30ff70');
+    // Heal all pets
+    var _self = this;
+    this.pts.forEach(function(pt) {
+      if (pt.dead || !pt.mhp) return;
+      pt.hp = Math.min(pt.mhp, pt.hp + _hAmt);
+      _self.fl(pt.x, pt.y - 15, '+' + _hAmt + '❤', '#30ff70');
+    });
+    // Heal or revive all other team members
+    for (var _tj = 0; _tj < this.team.length; _tj++) {
+      if (_tj === this.teamIdx) continue;
+      if (this.teamDeadThisRun[_tj]) {
+        this.teamDeadThisRun[_tj] = false;
+        this.teamHp[_tj] = Math.max(1, Math.floor(p.mhp * 0.3));
+        this.fl(p.x, p.y - 40, '✨ ' + this.team[_tj].e + ' Revived!', '#ffff44');
+      } else {
+        this.teamHp[_tj] = Math.min(p.mhp, this.teamHp[_tj] + _hAmt);
+      }
+    }
+  }
+
   var now = Date.now();
   this.updatePets(dt, now);
   this.updateTowers(dt, now);
@@ -1449,6 +1482,7 @@ Game.prototype.initTeam = function(config) {
   this.teamBlastReady   = this.team.map(function() { return false; });
   this.teamDeadThisRun  = this.team.map(function() { return false; });
   this.teamRunKills     = this.team.map(function() { return 0; });
+  this.teamHealTim      = this.team.map(function() { return 0; });
   this.charKillsData    = (config && config.charKills) || {};
   this.charDef          = this.team[0] || null;
   this.p.hp             = this.teamHp[0];
