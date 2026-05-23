@@ -1,2 +1,4 @@
 node_modules/
 accounts.json
+accounts.db
+api/
